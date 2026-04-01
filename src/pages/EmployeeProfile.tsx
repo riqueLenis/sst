@@ -11,8 +11,7 @@ import {
   Download,
   ShieldCheck,
 } from "lucide-react";
-import jsPDF from "jspdf";
-import "jspdf-autotable";
+import { createPdfDocument } from "../lib/pdfUtils";
 
 export default function EmployeeProfile() {
   const { id } = useParams<{ id: string }>();
@@ -56,81 +55,81 @@ export default function EmployeeProfile() {
     );
 
   const generateFullHistoryPDF = () => {
-    if (!company) return;
+    void (async () => {
+      if (!company) return;
 
-    const doc = new jsPDF();
+      const { doc, autoTable } = await createPdfDocument();
 
-    // Header
-    doc.setFontSize(18);
-    doc.setTextColor(15, 23, 42);
-    doc.text("Ficha Completa de Entrega de EPI", 105, 20, { align: "center" });
+      doc.setFontSize(18);
+      doc.setTextColor(15, 23, 42);
+      doc.text("Ficha Completa de Entrega de EPI", 105, 20, {
+        align: "center",
+      });
 
-    doc.setFontSize(11);
-    doc.setTextColor(51, 65, 85);
-    doc.text(`Empresa: ${company.name}`, 14, 40);
-    doc.text(`CNPJ: ${company.cnpj}`, 14, 48);
+      doc.setFontSize(11);
+      doc.setTextColor(51, 65, 85);
+      doc.text(`Empresa: ${company.name}`, 14, 40);
+      doc.text(`CNPJ: ${company.cnpj}`, 14, 48);
 
-    doc.text(`Colaborador: ${employee.name}`, 14, 60);
-    doc.text(`CPF: ${employee.cpf}`, 14, 68);
-    doc.text(
-      `Cargo: ${role?.name || "N/A"} - Setor: ${sector?.name || "N/A"}`,
-      14,
-      76,
-    );
-    doc.text(
-      `Data de Admissão: ${new Date(employee.admissionDate).toLocaleDateString("pt-BR")}`,
-      14,
-      84,
-    );
+      doc.text(`Colaborador: ${employee.name}`, 14, 60);
+      doc.text(`CPF: ${employee.cpf}`, 14, 68);
+      doc.text(
+        `Cargo: ${role?.name || "N/A"} - Setor: ${sector?.name || "N/A"}`,
+        14,
+        76,
+      );
+      doc.text(
+        `Data de Admissão: ${new Date(employee.admissionDate).toLocaleDateString("pt-BR")}`,
+        14,
+        84,
+      );
 
-    // Table
-    const tableData = employeeDeliveries.map((delivery) => {
-      const ppe = ppes.find((p) => p.id === delivery.ppeId);
-      return [
-        ppe?.name || "Desconhecido",
-        ppe?.ca || "-",
-        delivery.quantity.toString(),
-        new Date(delivery.deliveryDate).toLocaleDateString("pt-BR"),
-        delivery.reason,
-        delivery.status === "delivered"
-          ? "Entregue"
-          : delivery.status === "returned"
-            ? "Devolvido"
-            : "Extraviado",
-      ];
-    });
+      const tableData = employeeDeliveries.map((delivery) => {
+        const ppe = ppes.find((p) => p.id === delivery.ppeId);
+        return [
+          ppe?.name || "Desconhecido",
+          ppe?.ca || "-",
+          delivery.quantity.toString(),
+          new Date(delivery.deliveryDate).toLocaleDateString("pt-BR"),
+          delivery.reason,
+          delivery.status === "delivered"
+            ? "Entregue"
+            : delivery.status === "returned"
+              ? "Devolvido"
+              : "Extraviado",
+        ];
+      });
 
-    (doc as any).autoTable({
-      startY: 95,
-      head: [["EPI", "CA", "Qtd", "Data", "Motivo", "Status"]],
-      body: tableData,
-      theme: "grid",
-      headStyles: {
-        fillColor: [37, 99, 235],
-        textColor: 255,
-        fontStyle: "bold",
-      },
-      styles: { fontSize: 10, cellPadding: 5 },
-    });
+      autoTable(doc, {
+        startY: 95,
+        head: [["EPI", "CA", "Qtd", "Data", "Motivo", "Status"]],
+        body: tableData,
+        theme: "grid",
+        headStyles: {
+          fillColor: [37, 99, 235],
+          textColor: 255,
+          fontStyle: "bold",
+        },
+        styles: { fontSize: 10, cellPadding: 5 },
+      });
 
-    // Declaration
-    const finalY = (doc as any).lastAutoTable.finalY || 120;
-    doc.setFontSize(10);
-    doc.setTextColor(71, 85, 105);
-    const declarationText = `Declaro ter recebido da empresa ${company.name} os Equipamentos de Proteção Individual (EPI) constantes nesta ficha, comprometendo-me a usá-los apenas para a finalidade a que se destinam, responsabilizando-me por sua guarda e conservação, e a comunicar qualquer alteração que os torne impróprios para uso.`;
+      const finalY = (doc as any).lastAutoTable.finalY || 120;
+      doc.setFontSize(10);
+      doc.setTextColor(71, 85, 105);
+      const declarationText = `Declaro ter recebido da empresa ${company.name} os Equipamentos de Proteção Individual (EPI) constantes nesta ficha, comprometendo-me a usá-los apenas para a finalidade a que se destinam, responsabilizando-me por sua guarda e conservação, e a comunicar qualquer alteração que os torne impróprios para uso.`;
 
-    const splitText = doc.splitTextToSize(declarationText, 180);
-    doc.text(splitText, 14, finalY + 20);
+      const splitText = doc.splitTextToSize(declarationText, 180);
+      doc.text(splitText, 14, finalY + 20);
 
-    // Signature lines
-    doc.setDrawColor(203, 213, 225);
-    doc.line(40, finalY + 70, 170, finalY + 70);
-    doc.setTextColor(15, 23, 42);
-    doc.text(`Assinatura do Colaborador: ${employee.name}`, 105, finalY + 78, {
-      align: "center",
-    });
+      doc.setDrawColor(203, 213, 225);
+      doc.line(40, finalY + 70, 170, finalY + 70);
+      doc.setTextColor(15, 23, 42);
+      doc.text(`Assinatura do Colaborador: ${employee.name}`, 105, finalY + 78, {
+        align: "center",
+      });
 
-    doc.save(`Historico_EPI_${employee.name.replace(/\s+/g, "_")}.pdf`);
+      doc.save(`Historico_EPI_${employee.name.replace(/\s+/g, "_")}.pdf`);
+    })();
   };
 
   return (
@@ -167,7 +166,7 @@ export default function EmployeeProfile() {
         <div className="bg-white shadow-sm rounded-2xl border border-slate-200 overflow-hidden lg:col-span-1">
           <div className="p-8">
             <div className="flex flex-col items-center justify-center mb-8">
-              <div className="w-28 h-28 bg-gradient-to-br from-blue-50 to-blue-100 border-4 border-white shadow-md rounded-full flex items-center justify-center text-blue-600 mb-4">
+              <div className="w-28 h-28 bg-linear-to-br from-blue-50 to-blue-100 border-4 border-white shadow-md rounded-full flex items-center justify-center text-blue-600 mb-4">
                 <User className="w-12 h-12" />
               </div>
               <h2 className="text-2xl font-bold text-center text-slate-900 mb-2">

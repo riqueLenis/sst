@@ -1,14 +1,15 @@
 import React, { useState } from "react";
-import { useAppContext } from "../store/AppContext";
 import {
-  Plus,
-  Pencil,
-  Trash2,
   Building2,
   Download,
+  Pencil,
+  Plus,
   Search,
+  Trash2,
 } from "lucide-react";
+import { useAppContext } from "../store/AppContext";
 import { exportTableToPDF } from "../lib/pdfUtils";
+import type { Company } from "../types";
 
 export default function Companies() {
   const { companies, addCompany, updateCompany, deleteCompany } =
@@ -23,19 +24,30 @@ export default function Companies() {
   });
   const [searchTerm, setSearchTerm] = useState("");
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const filteredCompanies = companies.filter(
+    (company) =>
+      company.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      company.cnpj.includes(searchTerm),
+  );
+  const companiesWithContact = companies.filter(
+    (company) => company.contact.trim().length > 0,
+  ).length;
+
+  const handleSubmit = (event: React.FormEvent) => {
+    event.preventDefault();
+
     if (editingId) {
       updateCompany(editingId, formData);
     } else {
       addCompany(formData);
     }
+
     setIsModalOpen(false);
-    setFormData({ name: "", cnpj: "", address: "", contact: "" });
     setEditingId(null);
+    setFormData({ name: "", cnpj: "", address: "", contact: "" });
   };
 
-  const handleEdit = (company: any) => {
+  const handleEdit = (company: Company) => {
     setFormData({
       name: company.name,
       cnpj: company.cnpj,
@@ -59,12 +71,13 @@ export default function Companies() {
       "Endereço",
       "Contato",
     ];
-    const data = filteredCompanies.map((c) => [
-      c.name,
-      c.cnpj,
-      c.address,
-      c.contact,
+    const data = filteredCompanies.map((company) => [
+      company.name,
+      company.cnpj,
+      company.address,
+      company.contact,
     ]);
+
     exportTableToPDF(
       "Relatório de Empresas Cadastradas",
       columns,
@@ -73,65 +86,199 @@ export default function Companies() {
     );
   };
 
-  const filteredCompanies = companies.filter(
-    (c) =>
-      c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      c.cnpj.includes(searchTerm),
-  );
+  const resetModal = () => {
+    setEditingId(null);
+    setFormData({ name: "", cnpj: "", address: "", contact: "" });
+    setIsModalOpen(true);
+  };
+
+  const summaryStats = [
+    {
+      label: "Base total",
+      value: companies.length,
+      copy: "Empresas disponíveis no ambiente para gestão contínua.",
+    },
+    {
+      label: "Com contato",
+      value: companiesWithContact,
+      copy: "Cadastros com canal direto para operação comercial e suporte.",
+    },
+    {
+      label: "Resultados visíveis",
+      value: filteredCompanies.length,
+      copy: searchTerm
+        ? "Filtro aplicado sobre nome fantasia, razão social ou CNPJ."
+        : "Sem filtros ativos na consulta da base empresarial.",
+    },
+  ];
 
   return (
-    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-slate-900 flex items-center gap-3">
-            <div className="p-2 bg-blue-100 rounded-xl">
-              <Building2 className="w-6 h-6 text-blue-600" />
-            </div>
-            Empresas
+    <div className="page-shell animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <section className="page-hero">
+        <div className="hero-card">
+          <span className="hero-accent">Cadastro empresarial</span>
+          <h1 className="hero-title">
+            Empresas em uma visão clara, pronta para operação em qualquer tela.
           </h1>
-          <p className="text-slate-500 mt-1">
-            Gerencie as empresas clientes do sistema.
+          <p className="hero-description">
+            Concentre cadastro, busca, edição e exportação em uma listagem mais
+            executiva, com leitura objetiva em desktop e cartões nativos no
+            celular.
           </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-3">
-          <button
-            onClick={handleExportPDF}
-            disabled={companies.length === 0}
-            className="inline-flex items-center justify-center rounded-xl text-sm font-semibold transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:pointer-events-none disabled:opacity-50 bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 hover:text-slate-900 shadow-sm h-10 px-4 py-2"
-          >
-            <Download className="w-4 h-4 mr-2" />
-            Exportar PDF
-          </button>
-          <button
-            onClick={() => {
-              setEditingId(null);
-              setFormData({ name: "", cnpj: "", address: "", contact: "" });
-              setIsModalOpen(true);
-            }}
-            className="inline-flex items-center justify-center rounded-xl text-sm font-semibold transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:pointer-events-none disabled:opacity-50 bg-blue-600 text-white hover:bg-blue-700 shadow-sm shadow-blue-200 h-10 px-4 py-2"
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Nova Empresa
-          </button>
-        </div>
-      </div>
 
-      <div className="bg-white shadow-sm rounded-2xl border border-slate-200 overflow-hidden">
-        <div className="p-4 border-b border-slate-100 bg-slate-50/50">
-          <div className="relative max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-            <input
-              type="text"
-              placeholder="Buscar por nome ou CNPJ..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-            />
+          <div className="hero-actions">
+            <button
+              onClick={resetModal}
+              className="btn-primary"
+              type="button"
+            >
+              <Plus className="h-4 w-4" />
+              Nova empresa
+            </button>
+            <button
+              onClick={handleExportPDF}
+              disabled={filteredCompanies.length === 0}
+              className="btn-secondary disabled:pointer-events-none disabled:opacity-50"
+              type="button"
+            >
+              <Download className="h-4 w-4" />
+              Exportar PDF
+            </button>
           </div>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm text-left text-slate-600">
-            <thead className="text-xs text-slate-500 uppercase bg-slate-50 border-b border-slate-200 font-semibold">
+
+        <aside className="hero-aside">
+          <div>
+            <p className="eyebrow">Resumo da base</p>
+            <h2 className="panel-title">Leitura rápida do cadastro</h2>
+            <p className="panel-copy">
+              Indicadores de volume e qualidade para a base empresarial.
+            </p>
+          </div>
+
+          <div className="hero-stat-list">
+            {summaryStats.map((item) => (
+              <div key={item.label} className="hero-stat">
+                <div>
+                  <p className="hero-stat-label">{item.label}</p>
+                  <p className="hero-stat-value">{item.value}</p>
+                </div>
+                <p className="hero-stat-copy">{item.copy}</p>
+              </div>
+            ))}
+          </div>
+        </aside>
+      </section>
+
+      <section className="panel">
+        <div className="toolbar">
+          <div>
+            <p className="eyebrow">Consulta inteligente</p>
+            <h2 className="panel-title">Base empresarial</h2>
+            <p className="panel-copy">
+              Busque por nome ou CNPJ, filtre rapidamente e faça ajustes sem
+              perder contexto de tela.
+            </p>
+          </div>
+
+          <div className="toolbar-actions">
+            <button
+              onClick={handleExportPDF}
+              disabled={filteredCompanies.length === 0}
+              className="btn-secondary disabled:pointer-events-none disabled:opacity-50"
+              type="button"
+            >
+              <Download className="h-4 w-4" />
+              Exportar PDF
+            </button>
+            <button
+              onClick={resetModal}
+              className="btn-primary"
+              type="button"
+            >
+              <Plus className="h-4 w-4" />
+              Nova empresa
+            </button>
+          </div>
+        </div>
+
+        <div className="mt-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div className="search-shell">
+            <Search className="h-4 w-4" />
+            <input
+              type="text"
+              placeholder="Buscar por nome, razão social ou CNPJ..."
+              value={searchTerm}
+              onChange={(event) => setSearchTerm(event.target.value)}
+              className="search-input"
+            />
+          </div>
+
+          <p className="text-sm text-slate-500">
+            {filteredCompanies.length} registro(s) visível(is)
+          </p>
+        </div>
+
+        <div className="mobile-list mt-6 md:hidden">
+          {filteredCompanies.map((company) => (
+            <article key={company.id} className="mobile-record">
+              <div className="mobile-record-header">
+                <div>
+                  <p className="mobile-record-title">{company.name}</p>
+                  <p className="mobile-record-copy">CNPJ {company.cnpj}</p>
+                </div>
+
+                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-sky-100 text-sky-700">
+                  <Building2 className="h-5 w-5" />
+                </div>
+              </div>
+
+              <div className="mobile-record-grid">
+                <div>
+                  <p className="mobile-record-label">Contato</p>
+                  <p className="mobile-record-value">{company.contact}</p>
+                </div>
+                <div>
+                  <p className="mobile-record-label">Endereço</p>
+                  <p className="mobile-record-value">{company.address}</p>
+                </div>
+              </div>
+
+              <div className="mobile-record-actions">
+                <button
+                  onClick={() => handleEdit(company)}
+                  className="icon-action icon-action-primary"
+                  type="button"
+                  aria-label={`Editar ${company.name}`}
+                >
+                  <Pencil className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={() => handleDelete(company.id)}
+                  className="icon-action icon-action-danger"
+                  type="button"
+                  aria-label={`Excluir ${company.name}`}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </div>
+            </article>
+          ))}
+
+          {filteredCompanies.length === 0 && (
+            <div className="empty-state rounded-[1.4rem] border border-dashed border-slate-200 bg-slate-50/70">
+              <Building2 className="h-10 w-10 text-slate-300" />
+              <p className="empty-state-title">Nenhuma empresa encontrada</p>
+              <p className="empty-state-copy">
+                Ajuste sua busca ou cadastre uma nova empresa para continuar.
+              </p>
+            </div>
+          )}
+        </div>
+
+        <div className="mt-6 hidden overflow-x-auto md:block">
+          <table className="min-w-[860px] w-full text-left text-sm text-slate-600">
+            <thead className="text-xs uppercase text-slate-500">
               <tr>
                 <th className="px-6 py-4">Nome Fantasia / Razão Social</th>
                 <th className="px-6 py-4">CNPJ</th>
@@ -144,7 +291,7 @@ export default function Companies() {
               {filteredCompanies.map((company) => (
                 <tr
                   key={company.id}
-                  className="bg-white hover:bg-slate-50/80 transition-colors"
+                  className="transition-colors hover:bg-slate-50/80"
                 >
                   <td className="px-6 py-4 font-semibold text-slate-900">
                     {company.name}
@@ -152,36 +299,38 @@ export default function Companies() {
                   <td className="px-6 py-4">{company.cnpj}</td>
                   <td className="px-6 py-4">{company.address}</td>
                   <td className="px-6 py-4">{company.contact}</td>
-                  <td className="px-6 py-4 text-right">
+                  <td className="px-6 py-4">
                     <div className="flex items-center justify-end gap-2">
                       <button
                         onClick={() => handleEdit(company)}
-                        className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                        className="icon-action icon-action-primary"
+                        type="button"
+                        aria-label={`Editar ${company.name}`}
                       >
-                        <Pencil className="w-4 h-4" />
+                        <Pencil className="h-4 w-4" />
                       </button>
                       <button
                         onClick={() => handleDelete(company.id)}
-                        className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                        className="icon-action icon-action-danger"
+                        type="button"
+                        aria-label={`Excluir ${company.name}`}
                       >
-                        <Trash2 className="w-4 h-4" />
+                        <Trash2 className="h-4 w-4" />
                       </button>
                     </div>
                   </td>
                 </tr>
               ))}
+
               {filteredCompanies.length === 0 && (
                 <tr>
-                  <td
-                    colSpan={5}
-                    className="px-6 py-12 text-center text-slate-500"
-                  >
-                    <div className="flex flex-col items-center justify-center">
-                      <Building2 className="w-12 h-12 text-slate-300 mb-3" />
-                      <p className="text-base font-medium text-slate-900">
+                  <td colSpan={5} className="px-6 py-14">
+                    <div className="empty-state">
+                      <Building2 className="h-12 w-12 text-slate-300" />
+                      <p className="empty-state-title">
                         Nenhuma empresa encontrada
                       </p>
-                      <p className="text-sm">
+                      <p className="empty-state-copy">
                         Tente ajustar sua busca ou cadastre uma nova empresa.
                       </p>
                     </div>
@@ -191,109 +340,104 @@ export default function Companies() {
             </tbody>
           </table>
         </div>
-      </div>
+      </section>
 
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
-            <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-              <h3 className="text-lg font-bold text-slate-900">
-                {editingId ? "Editar Empresa" : "Nova Empresa"}
-              </h3>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/55 p-4 backdrop-blur-md">
+          <div className="w-full max-w-lg overflow-hidden rounded-[1.75rem] border border-white/75 bg-white/95 shadow-2xl shadow-slate-900/25">
+            <div className="flex items-center justify-between border-b border-slate-200/70 px-6 py-5">
+              <div>
+                <p className="eyebrow">Cadastro</p>
+                <h3 className="panel-title">
+                  {editingId ? "Editar empresa" : "Nova empresa"}
+                </h3>
+              </div>
+
               <button
                 onClick={() => setIsModalOpen(false)}
-                className="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-100 transition-colors"
+                className="app-icon-button"
+                type="button"
+                aria-label="Fechar modal"
               >
-                <span className="sr-only">Fechar</span>
-                <svg
-                  className="h-5 w-5"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                </svg>
+                <span className="text-base leading-none">×</span>
               </button>
             </div>
-            <form onSubmit={handleSubmit} className="p-6 space-y-4">
+
+            <form onSubmit={handleSubmit} className="space-y-4 p-6">
               <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1.5">
+                <label className="mb-1.5 block text-sm font-semibold text-slate-700">
                   Nome / Razão Social
                 </label>
                 <input
                   type="text"
                   required
                   value={formData.name}
-                  onChange={(e) =>
-                    setFormData({ ...formData, name: e.target.value })
+                  onChange={(event) =>
+                    setFormData({ ...formData, name: event.target.value })
                   }
-                  className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm"
                   placeholder="Ex: Indústria Alpha S.A."
                 />
               </div>
+
               <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1.5">
+                <label className="mb-1.5 block text-sm font-semibold text-slate-700">
                   CNPJ
                 </label>
                 <input
                   type="text"
                   required
                   value={formData.cnpj}
-                  onChange={(e) =>
-                    setFormData({ ...formData, cnpj: e.target.value })
+                  onChange={(event) =>
+                    setFormData({ ...formData, cnpj: event.target.value })
                   }
-                  className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm"
                   placeholder="00.000.000/0000-00"
                 />
               </div>
+
               <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1.5">
+                <label className="mb-1.5 block text-sm font-semibold text-slate-700">
                   Endereço
                 </label>
                 <input
                   type="text"
                   required
                   value={formData.address}
-                  onChange={(e) =>
-                    setFormData({ ...formData, address: e.target.value })
+                  onChange={(event) =>
+                    setFormData({ ...formData, address: event.target.value })
                   }
-                  className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                  placeholder="Rua, Número, Bairro, Cidade - UF"
+                  className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm"
+                  placeholder="Rua, número, bairro, cidade - UF"
                 />
               </div>
+
               <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1.5">
-                  Contato (Email/Telefone)
+                <label className="mb-1.5 block text-sm font-semibold text-slate-700">
+                  Contato
                 </label>
                 <input
                   type="text"
                   required
                   value={formData.contact}
-                  onChange={(e) =>
-                    setFormData({ ...formData, contact: e.target.value })
+                  onChange={(event) =>
+                    setFormData({ ...formData, contact: event.target.value })
                   }
-                  className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm"
                   placeholder="contato@empresa.com"
                 />
               </div>
-              <div className="mt-8 flex justify-end gap-3 pt-4 border-t border-slate-100">
+
+              <div className="flex flex-col gap-3 border-t border-slate-200/70 pt-5 sm:flex-row sm:justify-end">
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 text-sm font-semibold text-slate-700 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                  className="btn-secondary"
                 >
                   Cancelar
                 </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 text-sm font-semibold text-white bg-blue-600 border border-transparent rounded-xl hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm shadow-blue-200 transition-all"
-                >
-                  Salvar Empresa
+                <button type="submit" className="btn-primary">
+                  Salvar empresa
                 </button>
               </div>
             </form>

@@ -1,29 +1,29 @@
 import React from "react";
-import { useAppContext } from "../store/AppContext";
-import {
-  Users,
-  Building2,
-  HardHat,
-  ShieldAlert,
-  ArrowRight,
-  DollarSign,
-  FileSignature,
-  Stethoscope,
-} from "lucide-react";
 import { Link } from "react-router-dom";
 import {
-  BarChart,
+  ArrowRight,
+  Building2,
+  DollarSign,
+  FileSignature,
+  HardHat,
+  ShieldAlert,
+  Stethoscope,
+  Users,
+} from "lucide-react";
+import {
   Bar,
-  XAxis,
-  YAxis,
+  BarChart,
   CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  PieChart,
-  Pie,
   Cell,
   Legend,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
 } from "recharts";
+import { useAppContext } from "../store/AppContext";
 
 export default function Dashboard() {
   const {
@@ -36,126 +36,220 @@ export default function Dashboard() {
     asos,
   } = useAppContext();
 
+  const activeEmployees = employees.filter((employee) => employee.status === "active").length;
+  const lowStockCount = ppes.filter((ppe) => ppe.stockQuantity < 20).length;
+  const expiredProgramsCount = documents.filter(
+    (document) =>
+      document.status === "expired" || new Date(document.validUntil) < new Date(),
+  ).length;
+  const expiredAsosCount = asos.filter(
+    (aso) => new Date(aso.validUntil) < new Date(),
+  ).length;
+  const pendingTransactionsCount = transactions.filter(
+    (transaction) => transaction.status === "pending",
+  ).length;
+  const deliveriesThisMonth = ppeDeliveries.filter((delivery) => {
+    const deliveryDate = new Date(delivery.deliveryDate);
+    const now = new Date();
+    return (
+      deliveryDate.getMonth() === now.getMonth() &&
+      deliveryDate.getFullYear() === now.getFullYear()
+    );
+  }).length;
+
   const stats = [
     {
       name: "Empresas",
       value: companies.length,
       icon: Building2,
-      color: "from-blue-500 to-blue-600",
+      color: "from-sky-500 to-cyan-500",
       link: "/empresas",
+      support: "Base cadastrada para operação e atendimento.",
     },
     {
-      name: "Colaboradores",
-      value: employees.filter((e) => e.status === "active").length,
+      name: "Colaboradores ativos",
+      value: activeEmployees,
       icon: Users,
-      color: "from-emerald-500 to-emerald-600",
+      color: "from-emerald-500 to-teal-500",
       link: "/colaboradores",
+      support: "Equipe em atividade com vínculo monitorado.",
     },
     {
-      name: "Tipos de EPI",
-      value: ppes.length,
+      name: "EPIs com atenção",
+      value: lowStockCount,
       icon: HardHat,
-      color: "from-amber-500 to-amber-600",
+      color: "from-amber-500 to-orange-500",
       link: "/epis",
+      support: "Itens com estoque baixo ou próximos de ruptura.",
     },
     {
-      name: "Entregas de EPI",
-      value: ppeDeliveries.length,
+      name: "Entregas no mês",
+      value: deliveriesThisMonth,
       icon: ShieldAlert,
-      color: "from-purple-500 to-purple-600",
+      color: "from-indigo-500 to-sky-500",
       link: "/entregas",
+      support: "Movimentações recentes de EPIs no período atual.",
     },
     {
-      name: "Transações",
-      value: transactions.length,
+      name: "Financeiro pendente",
+      value: pendingTransactionsCount,
       icon: DollarSign,
-      color: "from-indigo-500 to-indigo-600",
+      color: "from-rose-500 to-orange-500",
       link: "/financeiro",
+      support: "Transações aguardando baixa ou recebimento.",
     },
     {
-      name: "Programas",
-      value: documents.length,
+      name: "Programas vencidos",
+      value: expiredProgramsCount,
       icon: FileSignature,
-      color: "from-rose-500 to-rose-600",
+      color: "from-violet-500 to-fuchsia-500",
       link: "/programas",
+      support: "Documentos com vigência encerrada ou expirada.",
     },
     {
-      name: "ASOs",
-      value: asos.length,
+      name: "ASOs vencidos",
+      value: expiredAsosCount,
       icon: Stethoscope,
-      color: "from-cyan-500 to-cyan-600",
+      color: "from-cyan-500 to-blue-500",
       link: "/saude",
+      support: "Exames que já precisam de ação ou renovação.",
     },
   ];
 
-  // Data for charts
   const employeesByCompany = companies
-    .map((c) => ({
-      name: c.name.length > 15 ? c.name.substring(0, 15) + "..." : c.name,
+    .map((company) => ({
+      name:
+        company.name.length > 16
+          ? `${company.name.slice(0, 16)}...`
+          : company.name,
       Colaboradores: employees.filter(
-        (e) => e.companyId === c.id && e.status === "active",
+        (employee) => employee.companyId === company.id && employee.status === "active",
       ).length,
     }))
-    .filter((d) => d.Colaboradores > 0)
-    .slice(0, 5);
+    .filter((item) => item.Colaboradores > 0)
+    .slice(0, 6);
 
   const ppeStockData = [
     {
-      name: "Estoque Alto (>50)",
-      value: ppes.filter((p) => p.stockQuantity > 50).length,
+      name: "Estoque alto",
+      value: ppes.filter((ppe) => ppe.stockQuantity > 50).length,
     },
     {
-      name: "Estoque Médio (20-50)",
-      value: ppes.filter((p) => p.stockQuantity >= 20 && p.stockQuantity <= 50)
-        .length,
+      name: "Estoque médio",
+      value: ppes.filter(
+        (ppe) => ppe.stockQuantity >= 20 && ppe.stockQuantity <= 50,
+      ).length,
     },
     {
-      name: "Estoque Baixo (<20)",
-      value: ppes.filter((p) => p.stockQuantity < 20).length,
+      name: "Estoque baixo",
+      value: ppes.filter((ppe) => ppe.stockQuantity < 20).length,
     },
   ];
-  const COLORS = ["#10b981", "#f59e0b", "#ef4444"];
+
+  const stockColors = ["#10b981", "#f59e0b", "#ef4444"];
+  const radarStats = [
+    {
+      label: "Pontos de atenção",
+      value: lowStockCount + expiredProgramsCount + expiredAsosCount,
+      copy: "Pendências combinadas entre estoque, documentos e ASOs.",
+    },
+    {
+      label: "Entregas no período",
+      value: deliveriesThisMonth,
+      copy: "Movimentações de EPIs registradas neste mês.",
+    },
+    {
+      label: "Recebimentos pendentes",
+      value: pendingTransactionsCount,
+      copy: "Itens financeiros que ainda exigem ação.",
+    },
+  ];
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-slate-900">
-            Dashboard
+    <div className="page-shell animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <section className="page-hero">
+        <div className="hero-card">
+          <span className="hero-accent">Painel executivo</span>
+          <h1 className="hero-title">
+            Uma visão operacional consistente, da diretoria ao celular.
           </h1>
-          <p className="text-slate-500 mt-1">
-            Visão geral do sistema de Saúde e Segurança do Trabalho.
+          <p className="hero-description">
+            Acompanhe empresas, colaboradores, EPIs, programas, saúde
+            ocupacional e financeiro em um cockpit único desenhado para leitura
+            rápida em desktop, tablet e mobile.
           </p>
-        </div>
-      </div>
 
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7">
-        {stats.map((stat) => (
-          <Link
-            to={stat.link}
-            key={stat.name}
-            className="group bg-white border border-slate-200 shadow-sm rounded-2xl p-4 hover:shadow-md transition-all duration-200 hover:-translate-y-1 flex flex-col items-center text-center"
-          >
-            <div
-              className={`p-3 rounded-xl bg-gradient-to-br ${stat.color} shadow-sm text-white mb-3`}
-            >
-              <stat.icon className="h-5 w-5" aria-hidden="true" />
-            </div>
-            <p className="text-2xl font-bold text-slate-900 leading-none mb-1">
-              {stat.value}
+          <div className="hero-actions">
+            <Link to="/colaboradores" className="btn-primary">
+              Revisar equipe
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+            <Link to="/entregas" className="btn-secondary">
+              Registrar entrega
+            </Link>
+            <Link to="/programas" className="btn-soft">
+              Ver documentos críticos
+            </Link>
+          </div>
+        </div>
+
+        <aside className="hero-aside">
+          <div>
+            <p className="eyebrow">Radar do dia</p>
+            <h2 className="panel-title">Foco operacional imediato</h2>
+            <p className="panel-copy">
+              Indicadores condensados para priorização rápida da rotina.
             </p>
-            <h3 className="text-xs font-medium text-slate-500">{stat.name}</h3>
+          </div>
+
+          <div className="hero-stat-list">
+            {radarStats.map((item) => (
+              <div key={item.label} className="hero-stat">
+                <div>
+                  <p className="hero-stat-label">{item.label}</p>
+                  <p className="hero-stat-value">{item.value}</p>
+                </div>
+                <p className="hero-stat-copy">{item.copy}</p>
+              </div>
+            ))}
+          </div>
+        </aside>
+      </section>
+
+      <section className="metric-grid">
+        {stats.map((stat) => (
+          <Link to={stat.link} key={stat.name} className="metric-card group">
+            <div className="metric-top">
+              <div>
+                <p className="metric-label">{stat.name}</p>
+                <p className="metric-value">{stat.value}</p>
+              </div>
+
+              <div
+                className={`metric-icon bg-linear-to-br ${stat.color}`}
+              >
+                <stat.icon className="h-5 w-5" aria-hidden="true" />
+              </div>
+            </div>
+
+            <p className="metric-support">{stat.support}</p>
           </Link>
         ))}
-      </div>
+      </section>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Chart 1: Employees by Company */}
-        <div className="bg-white border border-slate-200 shadow-sm rounded-2xl p-6">
-          <h2 className="text-lg font-bold text-slate-900 mb-6">
-            Colaboradores por Empresa (Top 5)
-          </h2>
-          <div className="h-72">
+      <section className="grid grid-cols-1 gap-6 xl:grid-cols-[1.15fr_0.85fr]">
+        <div className="panel">
+          <div className="panel-heading">
+            <div>
+              <p className="eyebrow">Distribuição</p>
+              <h2 className="panel-title">Colaboradores por empresa</h2>
+              <p className="panel-copy">
+                Leitura consolidada das empresas com maior volume de pessoas.
+              </p>
+            </div>
+          </div>
+
+          <div className="h-80">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart
                 data={employeesByCompany}
@@ -164,7 +258,7 @@ export default function Dashboard() {
                 <CartesianGrid
                   strokeDasharray="3 3"
                   vertical={false}
-                  stroke="#e2e8f0"
+                  stroke="#dbe4ee"
                 />
                 <XAxis
                   dataKey="name"
@@ -180,179 +274,188 @@ export default function Dashboard() {
                 <Tooltip
                   cursor={{ fill: "#f1f5f9" }}
                   contentStyle={{
-                    borderRadius: "12px",
-                    border: "none",
-                    boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)",
+                    borderRadius: "16px",
+                    border: "1px solid rgba(226, 232, 240, 0.85)",
+                    boxShadow: "0 20px 40px -30px rgba(15, 23, 42, 0.35)",
                   }}
                 />
                 <Bar
                   dataKey="Colaboradores"
-                  fill="#3b82f6"
-                  radius={[4, 4, 0, 0]}
-                  barSize={40}
+                  fill="#0f766e"
+                  radius={[10, 10, 0, 0]}
+                  barSize={34}
                 />
               </BarChart>
             </ResponsiveContainer>
           </div>
         </div>
 
-        {/* Chart 2: PPE Stock Status */}
-        <div className="bg-white border border-slate-200 shadow-sm rounded-2xl p-6">
-          <h2 className="text-lg font-bold text-slate-900 mb-6">
-            Status do Estoque de EPIs
-          </h2>
-          <div className="h-72">
+        <div className="panel">
+          <div className="panel-heading">
+            <div>
+              <p className="eyebrow">Estoque</p>
+              <h2 className="panel-title">Status do estoque de EPIs</h2>
+              <p className="panel-copy">
+                Distribuição do inventário entre estoque alto, médio e crítico.
+              </p>
+            </div>
+          </div>
+
+          <div className="h-80">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
                   data={ppeStockData}
                   cx="50%"
                   cy="50%"
-                  innerRadius={60}
-                  outerRadius={100}
-                  paddingAngle={5}
+                  innerRadius={58}
+                  outerRadius={98}
+                  paddingAngle={4}
                   dataKey="value"
                 >
                   {ppeStockData.map((entry, index) => (
                     <Cell
-                      key={`cell-${index}`}
-                      fill={COLORS[index % COLORS.length]}
+                      key={`${entry.name}-${index}`}
+                      fill={stockColors[index % stockColors.length]}
                     />
                   ))}
                 </Pie>
                 <Tooltip
                   contentStyle={{
-                    borderRadius: "12px",
-                    border: "none",
-                    boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)",
+                    borderRadius: "16px",
+                    border: "1px solid rgba(226, 232, 240, 0.85)",
+                    boxShadow: "0 20px 40px -30px rgba(15, 23, 42, 0.35)",
                   }}
                 />
-                <Legend verticalAlign="bottom" height={36} iconType="circle" />
+                <Legend verticalAlign="bottom" iconType="circle" />
               </PieChart>
             </ResponsiveContainer>
           </div>
         </div>
-      </div>
+      </section>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        {/* Últimas Entregas */}
-        <div className="bg-white border border-slate-200 shadow-sm rounded-2xl p-6">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-lg font-bold text-slate-900">
-              Últimas Entregas de EPI
-            </h2>
-            <Link
-              to="/entregas"
-              className="text-sm font-medium text-blue-600 hover:text-blue-700"
-            >
+      <section className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+        <div className="panel">
+          <div className="panel-heading">
+            <div>
+              <p className="eyebrow">Últimas movimentações</p>
+              <h2 className="panel-title">Últimas entregas de EPI</h2>
+              <p className="panel-copy">
+                Histórico recente para validação rápida das entregas realizadas.
+              </p>
+            </div>
+            <Link to="/entregas" className="btn-secondary">
               Ver todas
             </Link>
           </div>
-          <div className="flow-root">
-            <ul className="-my-5 divide-y divide-slate-100">
-              {ppeDeliveries
-                .slice(-5)
-                .reverse()
-                .map((delivery) => {
-                  const employee = employees.find(
-                    (e) => e.id === delivery.employeeId,
-                  );
-                  const ppe = ppes.find((p) => p.id === delivery.ppeId);
-                  return (
-                    <li
-                      key={delivery.id}
-                      className="py-4 hover:bg-slate-50 transition-colors rounded-lg px-2 -mx-2"
-                    >
-                      <div className="flex items-center space-x-4">
-                        <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-blue-600 font-bold">
-                          {employee?.name.charAt(0) || "?"}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-semibold text-slate-900 truncate">
-                            {employee?.name || "Desconhecido"}
-                          </p>
-                          <p className="text-sm text-slate-500 truncate">
-                            {ppe?.name || "EPI Desconhecido"} (
-                            {delivery.quantity} un)
-                          </p>
-                        </div>
-                        <div>
-                          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-100">
-                            {new Date(delivery.deliveryDate).toLocaleDateString(
-                              "pt-BR",
-                            )}
-                          </span>
-                        </div>
+
+          <ul className="space-y-3">
+            {ppeDeliveries
+              .slice(-5)
+              .reverse()
+              .map((delivery) => {
+                const employee = employees.find(
+                  (currentEmployee) => currentEmployee.id === delivery.employeeId,
+                );
+                const ppe = ppes.find((currentPpe) => currentPpe.id === delivery.ppeId);
+
+                return (
+                  <li
+                    key={delivery.id}
+                    className="flex flex-col gap-3 rounded-2xl border border-slate-200/70 bg-slate-50/70 px-4 py-4 sm:flex-row sm:items-center sm:justify-between"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-sky-100 text-sm font-bold text-sky-700">
+                        {employee?.name.charAt(0) ?? "?"}
                       </div>
-                    </li>
-                  );
-                })}
-              {ppeDeliveries.length === 0 && (
-                <li className="py-8 text-sm text-slate-500 text-center">
-                  Nenhuma entrega registrada.
-                </li>
-              )}
-            </ul>
-          </div>
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-slate-900">
+                          {employee?.name ?? "Colaborador não encontrado"}
+                        </p>
+                        <p className="truncate text-sm text-slate-500">
+                          {ppe?.name ?? "EPI desconhecido"} ({delivery.quantity} un)
+                        </p>
+                      </div>
+                    </div>
+
+                    <span className="status-pill border border-emerald-100 bg-emerald-50 text-emerald-700">
+                      {new Date(delivery.deliveryDate).toLocaleDateString("pt-BR")}
+                    </span>
+                  </li>
+                );
+              })}
+
+            {ppeDeliveries.length === 0 && (
+              <li className="empty-state rounded-2xl border border-dashed border-slate-200 bg-slate-50/70">
+                <ShieldAlert className="h-10 w-10 text-slate-300" />
+                <p className="empty-state-title">Nenhuma entrega registrada</p>
+                <p className="empty-state-copy">
+                  Assim que novas entregas forem lançadas, elas aparecem aqui.
+                </p>
+              </li>
+            )}
+          </ul>
         </div>
 
-        {/* EPIs Baixo Estoque */}
-        <div className="bg-white border border-slate-200 shadow-sm rounded-2xl p-6">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-lg font-bold text-slate-900">
-              EPIs com Baixo Estoque
-            </h2>
-            <Link
-              to="/epis"
-              className="text-sm font-medium text-blue-600 hover:text-blue-700"
-            >
+        <div className="panel">
+          <div className="panel-heading">
+            <div>
+              <p className="eyebrow">Risco de ruptura</p>
+              <h2 className="panel-title">EPIs com baixo estoque</h2>
+              <p className="panel-copy">
+                Itens que merecem reabastecimento ou ajuste de consumo.
+              </p>
+            </div>
+            <Link to="/epis" className="btn-secondary">
               Gerenciar
             </Link>
           </div>
-          <div className="flow-root">
-            <ul className="-my-5 divide-y divide-slate-100">
-              {ppes
-                .filter((p) => p.stockQuantity < 20)
-                .map((ppe) => (
-                  <li
-                    key={ppe.id}
-                    className="py-4 hover:bg-slate-50 transition-colors rounded-lg px-2 -mx-2"
-                  >
-                    <div className="flex items-center space-x-4">
-                      <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center text-amber-600">
-                        <HardHat className="w-5 h-5" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-slate-900 truncate">
-                          {ppe.name}
-                        </p>
-                        <p className="text-sm text-slate-500 truncate">
-                          CA: {ppe.ca}
-                        </p>
-                      </div>
-                      <div>
-                        <span
-                          className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold border ${
-                            ppe.stockQuantity <= 5
-                              ? "bg-red-50 text-red-700 border-red-100"
-                              : "bg-amber-50 text-amber-700 border-amber-100"
-                          }`}
-                        >
-                          {ppe.stockQuantity} em estoque
-                        </span>
-                      </div>
+
+          <ul className="space-y-3">
+            {ppes
+              .filter((ppe) => ppe.stockQuantity < 20)
+              .slice(0, 5)
+              .map((ppe) => (
+                <li
+                  key={ppe.id}
+                  className="flex flex-col gap-3 rounded-2xl border border-slate-200/70 bg-slate-50/70 px-4 py-4 sm:flex-row sm:items-center sm:justify-between"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-amber-100 text-amber-700">
+                      <HardHat className="h-5 w-5" />
                     </div>
-                  </li>
-                ))}
-              {ppes.filter((p) => p.stockQuantity < 20).length === 0 && (
-                <li className="py-8 text-sm text-slate-500 text-center">
-                  Estoque regularizado.
+                    <div>
+                      <p className="text-sm font-semibold text-slate-900">
+                        {ppe.name}
+                      </p>
+                      <p className="text-sm text-slate-500">CA: {ppe.ca}</p>
+                    </div>
+                  </div>
+
+                  <span
+                    className={
+                      ppe.stockQuantity <= 5
+                        ? "status-pill border border-red-100 bg-red-50 text-red-700"
+                        : "status-pill border border-amber-100 bg-amber-50 text-amber-700"
+                    }
+                  >
+                    {ppe.stockQuantity} em estoque
+                  </span>
                 </li>
-              )}
-            </ul>
-          </div>
+              ))}
+
+            {lowStockCount === 0 && (
+              <li className="empty-state rounded-2xl border border-dashed border-slate-200 bg-slate-50/70">
+                <HardHat className="h-10 w-10 text-slate-300" />
+                <p className="empty-state-title">Estoque regularizado</p>
+                <p className="empty-state-copy">
+                  Nenhum EPI está abaixo do nível de atenção neste momento.
+                </p>
+              </li>
+            )}
+          </ul>
         </div>
-      </div>
+      </section>
     </div>
   );
 }

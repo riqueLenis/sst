@@ -1,9 +1,7 @@
 import React, { useState } from "react";
 import { useAppContext } from "../store/AppContext";
 import { Plus, ShieldCheck, FileText, Download, Search } from "lucide-react";
-import jsPDF from "jspdf";
-import "jspdf-autotable";
-import { exportTableToPDF } from "../lib/pdfUtils";
+import { createPdfDocument, exportTableToPDF } from "../lib/pdfUtils";
 
 export default function PPEDeliveries() {
   const {
@@ -44,74 +42,77 @@ export default function PPEDeliveries() {
   };
 
   const generatePDF = (delivery: any) => {
-    const employee = employees.find((e) => e.id === delivery.employeeId);
-    const ppe = ppes.find((p) => p.id === delivery.ppeId);
-    const company = companies.find((c) => c.id === employee?.companyId);
+    void (async () => {
+      const employee = employees.find((e) => e.id === delivery.employeeId);
+      const ppe = ppes.find((p) => p.id === delivery.ppeId);
+      const company = companies.find((c) => c.id === employee?.companyId);
 
-    if (!employee || !ppe || !company) return;
+      if (!employee || !ppe || !company) return;
 
-    const doc = new jsPDF();
+      const { doc, autoTable } = await createPdfDocument();
 
-    // Header
-    doc.setFontSize(18);
-    doc.setTextColor(15, 23, 42);
-    doc.text("Ficha de Entrega de EPI", 105, 20, { align: "center" });
+      doc.setFontSize(18);
+      doc.setTextColor(15, 23, 42);
+      doc.text("Ficha de Entrega de EPI", 105, 20, { align: "center" });
 
-    doc.setFontSize(11);
-    doc.setTextColor(51, 65, 85);
-    doc.text(`Empresa: ${company.name}`, 14, 40);
-    doc.text(`CNPJ: ${company.cnpj}`, 14, 48);
+      doc.setFontSize(11);
+      doc.setTextColor(51, 65, 85);
+      doc.text(`Empresa: ${company.name}`, 14, 40);
+      doc.text(`CNPJ: ${company.cnpj}`, 14, 48);
 
-    doc.text(`Colaborador: ${employee.name}`, 14, 60);
-    doc.text(`CPF: ${employee.cpf}`, 14, 68);
-    doc.text(
-      `Data de Admissão: ${new Date(employee.admissionDate).toLocaleDateString("pt-BR")}`,
-      14,
-      76,
-    );
+      doc.text(`Colaborador: ${employee.name}`, 14, 60);
+      doc.text(`CPF: ${employee.cpf}`, 14, 68);
+      doc.text(
+        `Data de Admissão: ${new Date(employee.admissionDate).toLocaleDateString("pt-BR")}`,
+        14,
+        76,
+      );
 
-    // Table
-    (doc as any).autoTable({
-      startY: 90,
-      head: [["EPI", "CA", "Qtd", "Data Entrega", "Motivo"]],
-      body: [
-        [
-          ppe.name,
-          ppe.ca,
-          delivery.quantity.toString(),
-          new Date(delivery.deliveryDate).toLocaleDateString("pt-BR"),
-          delivery.reason,
+      autoTable(doc, {
+        startY: 90,
+        head: [["EPI", "CA", "Qtd", "Data Entrega", "Motivo"]],
+        body: [
+          [
+            ppe.name,
+            ppe.ca,
+            delivery.quantity.toString(),
+            new Date(delivery.deliveryDate).toLocaleDateString("pt-BR"),
+            delivery.reason,
+          ],
         ],
-      ],
-      theme: "grid",
-      headStyles: {
-        fillColor: [37, 99, 235],
-        textColor: 255,
-        fontStyle: "bold",
-      },
-      styles: { fontSize: 10, cellPadding: 5 },
-    });
+        theme: "grid",
+        headStyles: {
+          fillColor: [37, 99, 235],
+          textColor: 255,
+          fontStyle: "bold",
+        },
+        styles: { fontSize: 10, cellPadding: 5 },
+      });
 
-    // Declaration
-    const finalY = (doc as any).lastAutoTable.finalY || 120;
-    doc.setFontSize(10);
-    doc.setTextColor(71, 85, 105);
-    const declarationText = `Declaro ter recebido da empresa ${company.name} os Equipamentos de Proteção Individual (EPI) constantes nesta ficha, comprometendo-me a usá-los apenas para a finalidade a que se destinam, responsabilizando-me por sua guarda e conservação, e a comunicar qualquer alteração que os torne impróprios para uso.`;
+      const finalY = (doc as any).lastAutoTable.finalY || 120;
+      doc.setFontSize(10);
+      doc.setTextColor(71, 85, 105);
+      const declarationText = `Declaro ter recebido da empresa ${company.name} os Equipamentos de Proteção Individual (EPI) constantes nesta ficha, comprometendo-me a usá-los apenas para a finalidade a que se destinam, responsabilizando-me por sua guarda e conservação, e a comunicar qualquer alteração que os torne impróprios para uso.`;
 
-    const splitText = doc.splitTextToSize(declarationText, 180);
-    doc.text(splitText, 14, finalY + 20);
+      const splitText = doc.splitTextToSize(declarationText, 180);
+      doc.text(splitText, 14, finalY + 20);
 
-    // Signature lines
-    doc.setDrawColor(203, 213, 225);
-    doc.line(40, finalY + 70, 170, finalY + 70);
-    doc.setTextColor(15, 23, 42);
-    doc.text(`Assinatura do Colaborador: ${employee.name}`, 105, finalY + 78, {
-      align: "center",
-    });
+      doc.setDrawColor(203, 213, 225);
+      doc.line(40, finalY + 70, 170, finalY + 70);
+      doc.setTextColor(15, 23, 42);
+      doc.text(
+        `Assinatura do Colaborador: ${employee.name}`,
+        105,
+        finalY + 78,
+        {
+          align: "center",
+        },
+      );
 
-    doc.save(
-      `Ficha_EPI_${employee.name.replace(/\s+/g, "_")}_${delivery.deliveryDate}.pdf`,
-    );
+      doc.save(
+        `Ficha_EPI_${employee.name.replace(/\s+/g, "_")}_${delivery.deliveryDate}.pdf`,
+      );
+    })();
   };
 
   const handleExportListPDF = () => {

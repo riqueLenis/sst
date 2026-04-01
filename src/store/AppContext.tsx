@@ -106,7 +106,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
         console.error("Failed to parse state from local storage", e);
       }
     }
-    // Mock initial data for demonstration
     return {
       companies: [
         {
@@ -595,7 +594,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
 export const useAppContext = () => {
   const context = useContext(AppContext);
   if (context === undefined) {
-    throw new Error("useAppContext must be used within an AppProvider");
+    throw new Error("metodo useAppContext é pra ser usado dentro do AppProvider");
   }
   return context;
 };

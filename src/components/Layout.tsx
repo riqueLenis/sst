@@ -1,129 +1,305 @@
-import React, { useState } from "react";
-import { Link, Outlet, useLocation } from "react-router-dom";
+import React, { useEffect, useMemo, useState } from "react";
+import { NavLink, Outlet, useLocation } from "react-router-dom";
 import {
-  Building2,
-  Users,
-  HardHat,
-  ShieldCheck,
-  LayoutDashboard,
-  Menu,
-  X,
+  BellDot,
   Briefcase,
+  Building2,
+  ChevronRight,
+  Command,
   DollarSign,
   FileSignature,
+  HardHat,
+  LayoutDashboard,
+  Menu,
+  ShieldCheck,
+  Sparkles,
   Stethoscope,
+  type LucideIcon,
+  Users,
+  X,
 } from "lucide-react";
 import { cn } from "../lib/utils";
 
-const navItems = [
-  { name: "Dashboard", path: "/", icon: LayoutDashboard },
-  { name: "Empresas", path: "/empresas", icon: Building2 },
-  { name: "Setores & Cargos", path: "/setores", icon: Briefcase },
-  { name: "Colaboradores", path: "/colaboradores", icon: Users },
-  { name: "EPIs", path: "/epis", icon: HardHat },
-  { name: "Entregas de EPI", path: "/entregas", icon: ShieldCheck },
-  { name: "Saúde Ocupacional", path: "/saude", icon: Stethoscope },
-  { name: "Programas e Laudos", path: "/programas", icon: FileSignature },
-  { name: "Financeiro", path: "/financeiro", icon: DollarSign },
+type NavItem = {
+  name: string;
+  path: string;
+  icon: LucideIcon;
+  description: string;
+};
+
+const navItems: NavItem[] = [
+  {
+    name: "Dashboard",
+    path: "/",
+    icon: LayoutDashboard,
+    description: "Indicadores e visão executiva.",
+  },
+  {
+    name: "Empresas",
+    path: "/empresas",
+    icon: Building2,
+    description: "Base de clientes e contatos.",
+  },
+  {
+    name: "Setores & Cargos",
+    path: "/setores",
+    icon: Briefcase,
+    description: "Estrutura operacional e funções.",
+  },
+  {
+    name: "Colaboradores",
+    path: "/colaboradores",
+    icon: Users,
+    description: "Gestão de vínculos e histórico.",
+  },
+  {
+    name: "EPIs",
+    path: "/epis",
+    icon: HardHat,
+    description: "Catálogo, CA e estoque.",
+  },
+  {
+    name: "Entregas de EPI",
+    path: "/entregas",
+    icon: ShieldCheck,
+    description: "Entrega, devolução e ficha.",
+  },
+  {
+    name: "Saúde Ocupacional",
+    path: "/saude",
+    icon: Stethoscope,
+    description: "ASOs, afastamentos e encaminhamentos.",
+  },
+  {
+    name: "Programas e Laudos",
+    path: "/programas",
+    icon: FileSignature,
+    description: "PGR, LTCAT e vigências.",
+  },
+  {
+    name: "Financeiro",
+    path: "/financeiro",
+    icon: DollarSign,
+    description: "Receitas, despesas e faturamento.",
+  },
 ];
+
+const mobileNavItems = [navItems[0], navItems[1], navItems[3], navItems[4]];
+
+function getRouteContext(pathname: string) {
+  if (pathname.startsWith("/colaboradores/")) {
+    return {
+      section: "Pessoas",
+      label: "Perfil do colaborador",
+      description:
+        "Consulta individual com dados cadastrais, vínculo e histórico completo de EPIs.",
+    };
+  }
+
+  const currentItem = navItems.find(
+    (item) =>
+      pathname === item.path ||
+      (item.path !== "/" && pathname.startsWith(item.path)),
+  );
+
+  return {
+    section: currentItem ? "Módulo ativo" : "Painel central",
+    label: currentItem?.name ?? "SST Command",
+    description:
+      currentItem?.description ??
+      "Centro operacional para Saúde e Segurança do Trabalho.",
+  };
+}
 
 export default function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const location = useLocation();
+  const routeContext = useMemo(
+    () => getRouteContext(location.pathname),
+    [location.pathname],
+  );
+  const formattedDate = useMemo(
+    () =>
+      new Intl.DateTimeFormat("pt-BR", {
+        dateStyle: "medium",
+      }).format(new Date()),
+    [],
+  );
+
+  useEffect(() => {
+    setSidebarOpen(false);
+  }, [location.pathname]);
 
   return (
-    <div className="min-h-screen bg-slate-50 flex font-sans text-slate-900">
-      {/* Mobile sidebar backdrop */}
-      {sidebarOpen && (
-        <div
-          className="fixed inset-0 z-20 bg-slate-900/50 backdrop-blur-sm lg:hidden transition-opacity"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
+    <div className="app-shell">
+      <div
+        className={cn("app-backdrop", sidebarOpen && "app-backdrop-visible")}
+        onClick={() => setSidebarOpen(false)}
+      />
 
-      {/* Sidebar */}
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-30 w-72 bg-white border-r border-slate-200 transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0 shadow-sm",
-          sidebarOpen ? "translate-x-0" : "-translate-x-full",
+          "app-sidebar transform transition-transform duration-300 ease-out lg:translate-x-0",
+          sidebarOpen ? "translate-x-0" : "-translate-x-[110%]",
         )}
       >
-        <div className="flex items-center justify-between h-20 px-6 border-b border-slate-100">
-          <span className="text-2xl font-bold tracking-tight text-slate-800 flex items-center gap-3">
-            <div className="p-2 bg-blue-600 rounded-xl shadow-sm shadow-blue-200">
-              <ShieldCheck className="w-6 h-6 text-white" />
+        <div className="app-sidebar-inner">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <span className="brand-mark">
+                <ShieldCheck className="h-6 w-6" />
+              </span>
+              <p className="brand-kicker">Operação central</p>
+              <h1 className="brand-title">SST Command</h1>
+              <p className="brand-copy">
+                Monitoramento operacional para SST com leitura rápida,
+                decisões mais claras e navegação consistente.
+              </p>
             </div>
-            SST Pro
-          </span>
-          <button
-            onClick={() => setSidebarOpen(false)}
-            className="lg:hidden text-slate-400 hover:text-slate-600"
-          >
-            <X className="w-6 h-6" />
-          </button>
-        </div>
 
-        <nav className="p-4 space-y-1.5">
-          {navItems.map((item) => {
-            const isActive =
-              location.pathname === item.path ||
-              (item.path !== "/" && location.pathname.startsWith(item.path));
-            return (
-              <Link
+            <button
+              onClick={() => setSidebarOpen(false)}
+              className="app-icon-button lg:hidden"
+              type="button"
+              aria-label="Fechar menu"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+
+          <div className="sidebar-note">
+            <div>
+              <span className="sidebar-note-label">Ambiente online</span>
+              <p className="sidebar-note-title">
+                Gestão pronta para campo e escritório
+              </p>
+              <p className="sidebar-note-copy">
+                Interface otimizada para desktop, tablet e mobile, com acesso
+                rápido aos módulos mais críticos.
+              </p>
+            </div>
+            <Sparkles className="sidebar-note-icon h-5 w-5" />
+          </div>
+
+          <nav className="app-nav">
+            {navItems.map((item) => (
+              <NavLink
                 key={item.name}
                 to={item.path}
-                onClick={() => setSidebarOpen(false)}
-                className={cn(
-                  "flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200",
-                  isActive
-                    ? "bg-blue-50 text-blue-700 shadow-sm border border-blue-100/50"
-                    : "text-slate-600 hover:bg-slate-50 hover:text-slate-900",
-                )}
+                className={({ isActive }) =>
+                  cn("nav-link", isActive && "nav-link-active")
+                }
               >
-                <item.icon
-                  className={cn(
-                    "w-5 h-5",
-                    isActive ? "text-blue-600" : "text-slate-400",
-                  )}
-                />
-                {item.name}
-              </Link>
-            );
-          })}
-        </nav>
+                <item.icon className="nav-link-icon h-5 w-5" />
+                <span className="nav-link-copy">
+                  <span className="nav-link-title">{item.name}</span>
+                  <span className="nav-link-description">
+                    {item.description}
+                  </span>
+                </span>
+              </NavLink>
+            ))}
+          </nav>
+
+          <div className="sidebar-footer">
+            <p className="sidebar-footer-title">Rotina centralizada</p>
+            <p className="sidebar-footer-copy">
+              Empresas, pessoas, saúde ocupacional, programas e financeiro em
+              uma navegação única e previsível.
+            </p>
+          </div>
+        </div>
       </aside>
 
-      {/* Main content */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        {/* Top header */}
-        <header className="bg-white/80 backdrop-blur-md border-b border-slate-200 shadow-sm h-20 flex items-center px-4 sm:px-8 z-10 sticky top-0">
-          <button
-            onClick={() => setSidebarOpen(true)}
-            className="lg:hidden text-slate-500 hover:text-slate-700 mr-4 p-2 rounded-lg hover:bg-slate-100 transition-colors"
-          >
-            <Menu className="w-6 h-6" />
-          </button>
-          <div className="flex-1 flex justify-end">
-            <div className="flex items-center gap-3 cursor-pointer hover:bg-slate-50 p-2 rounded-xl transition-colors border border-transparent hover:border-slate-200">
-              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 shadow-sm flex items-center justify-center text-white font-bold text-sm">
-                AD
-              </div>
-              <div className="hidden sm:block">
-                <p className="text-sm font-semibold text-slate-700 leading-tight">
-                  Admin
+      <div className="app-main">
+        <div className="app-main-inner">
+          <header className="app-header">
+            <div className="flex min-w-0 flex-1 items-start gap-3">
+              <button
+                onClick={() => setSidebarOpen(true)}
+                className="app-menu-button lg:hidden"
+                type="button"
+                aria-label="Abrir menu"
+              >
+                <Menu className="h-5 w-5" />
+              </button>
+
+              <div className="min-w-0 flex-1">
+                <p className="app-header-trail">
+                  <span>{routeContext.section}</span>
+                  <ChevronRight className="h-3.5 w-3.5 text-slate-300" />
+                  <span className="text-slate-500">{routeContext.label}</span>
                 </p>
-                <p className="text-xs text-slate-500">Gestor SST</p>
+                <h2 className="app-header-title truncate">
+                  {routeContext.label}
+                </h2>
+                <p className="app-header-copy">{routeContext.description}</p>
               </div>
             </div>
-          </div>
-        </header>
 
-        {/* Page content */}
-        <main className="flex-1 overflow-auto p-4 sm:p-8">
-          <div className="max-w-7xl mx-auto">
-            <Outlet />
-          </div>
-        </main>
+            <div className="app-header-actions">
+              <div className="app-date-chip hidden md:inline-flex">
+                <Command className="h-4 w-4" />
+                {formattedDate}
+              </div>
+
+              <button
+                className="app-icon-button"
+                type="button"
+                aria-label="Notificações"
+              >
+                <BellDot className="h-5 w-5" />
+              </button>
+
+              <div className="header-user-card">
+                <div className="header-user-avatar bg-linear-to-br from-teal-600 to-sky-600">
+                  AD
+                </div>
+                <div className="hidden sm:block">
+                  <p className="header-user-name">Admin</p>
+                  <p className="header-user-role">Gestor SST</p>
+                </div>
+              </div>
+            </div>
+          </header>
+
+          <main className="app-content">
+            <div className="app-content-inner">
+              <Outlet />
+            </div>
+          </main>
+        </div>
+
+        <nav className="mobile-nav lg:hidden" aria-label="Navegação rápida">
+          {mobileNavItems.map((item) => (
+            <NavLink
+              key={item.path}
+              to={item.path}
+              className={({ isActive }) =>
+                cn("mobile-nav-item", isActive && "mobile-nav-item-active")
+              }
+            >
+              <item.icon className="h-4 w-4" />
+              <span>{item.name}</span>
+            </NavLink>
+          ))}
+
+          <button
+            type="button"
+            onClick={() => setSidebarOpen((value) => !value)}
+            className={cn(
+              "mobile-nav-item",
+              sidebarOpen && "mobile-nav-item-active",
+            )}
+          >
+            {sidebarOpen ? (
+              <X className="h-4 w-4" />
+            ) : (
+              <Menu className="h-4 w-4" />
+            )}
+            <span>Menu</span>
+          </button>
+        </nav>
       </div>
     </div>
   );
