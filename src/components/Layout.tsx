@@ -145,16 +145,18 @@ export default function Layout() {
       >
         <div className="app-sidebar-inner">
           <div className="flex items-start justify-between gap-4">
-            <div>
+            <div className="sidebar-brand">
               <span className="brand-mark">
                 <ShieldCheck className="h-6 w-6" />
               </span>
-              <p className="brand-kicker">Operação central</p>
-              <h1 className="brand-title">SST Command</h1>
-              <p className="brand-copy">
-                Monitoramento operacional para SST com leitura rápida,
-                decisões mais claras e navegação consistente.
-              </p>
+              <div className="sidebar-expandable sidebar-brand-copy">
+                <p className="brand-kicker">Operação central</p>
+                <h1 className="brand-title">SST Command</h1>
+                <p className="brand-copy">
+                  Monitoramento operacional para SST com leitura rápida,
+                  decisões mais claras e navegação consistente.
+                </p>
+              </div>
             </div>
 
             <button
@@ -167,18 +169,20 @@ export default function Layout() {
             </button>
           </div>
 
-          <div className="sidebar-note">
-            <div>
-              <span className="sidebar-note-label">Ambiente online</span>
-              <p className="sidebar-note-title">
-                Gestão pronta para campo e escritório
-              </p>
-              <p className="sidebar-note-copy">
-                Interface otimizada para desktop, tablet e mobile, com acesso
-                rápido aos módulos mais críticos.
-              </p>
+          <div className="sidebar-expandable-block">
+            <div className="sidebar-note">
+              <div>
+                <span className="sidebar-note-label">Ambiente online</span>
+                <p className="sidebar-note-title">
+                  Gestão pronta para campo e escritório
+                </p>
+                <p className="sidebar-note-copy">
+                  Interface otimizada para desktop, tablet e mobile, com acesso
+                  rápido aos módulos mais críticos.
+                </p>
+              </div>
+              <Sparkles className="sidebar-note-icon h-5 w-5" />
             </div>
-            <Sparkles className="sidebar-note-icon h-5 w-5" />
           </div>
 
           <nav className="app-nav">
@@ -186,12 +190,14 @@ export default function Layout() {
               <NavLink
                 key={item.name}
                 to={item.path}
+                aria-label={item.name}
+                title={item.name}
                 className={({ isActive }) =>
                   cn("nav-link", isActive && "nav-link-active")
                 }
               >
                 <item.icon className="nav-link-icon h-5 w-5" />
-                <span className="nav-link-copy">
+                <span className="nav-link-copy sidebar-expandable">
                   <span className="nav-link-title">{item.name}</span>
                   <span className="nav-link-description">
                     {item.description}
@@ -201,12 +207,14 @@ export default function Layout() {
             ))}
           </nav>
 
-          <div className="sidebar-footer">
-            <p className="sidebar-footer-title">Rotina centralizada</p>
-            <p className="sidebar-footer-copy">
-              Empresas, pessoas, saúde ocupacional, programas e financeiro em
-              uma navegação única e previsível.
-            </p>
+          <div className="sidebar-expandable-block">
+            <div className="sidebar-footer">
+              <p className="sidebar-footer-title">Rotina centralizada</p>
+              <p className="sidebar-footer-copy">
+                Empresas, pessoas, saúde ocupacional, programas e financeiro em
+                uma navegação única e previsível.
+              </p>
+            </div>
           </div>
         </div>
       </aside>
