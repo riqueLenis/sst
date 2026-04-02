@@ -44,6 +44,7 @@ body {
   min-height: 100vh;
   margin: 0;
   color: var(--text);
+  overflow-x: hidden;
   background:
     radial-gradient(
       circle at top left,
@@ -158,6 +159,8 @@ thead th {
 }
 
 [class~="overflow-x-auto"] {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
   scrollbar-width: thin;
   scrollbar-color: rgba(148, 163, 184, 0.6) transparent;
 }
@@ -461,6 +464,7 @@ thead th {
 
 .app-main-inner {
   padding: 1rem;
+  width: 100%;
 }
 
 .app-header {
@@ -850,6 +854,7 @@ thead th {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
+  flex-wrap: wrap;
   gap: 1rem;
   margin-bottom: 1.1rem;
 }
@@ -1086,6 +1091,15 @@ thead th {
 }
 
 @media (max-width: 1199px) {
+  .app-header-actions {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  .hero-stat {
+    align-items: flex-start;
+  }
+
   .metric-card {
     grid-column: span 4 / span 4;
   }
@@ -1102,6 +1116,20 @@ thead th {
     padding: 0.9rem;
   }
 
+  .app-header {
+    padding: 0.95rem 1rem;
+    border-radius: 1.25rem;
+  }
+
+  .app-header-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .app-header-copy {
+    max-width: none;
+  }
+
   .app-content {
     padding-bottom: 6.9rem;
   }
@@ -1112,6 +1140,42 @@ thead th {
 
   .page-hero {
     grid-template-columns: 1fr;
+  }
+
+  .hero-card,
+  .hero-aside,
+  .panel {
+    padding: 1.15rem;
+    border-radius: 1.35rem;
+  }
+
+  .hero-title {
+    font-size: clamp(1.95rem, 5vw, 2.7rem);
+  }
+
+  .hero-stat {
+    flex-direction: column;
+  }
+
+  .hero-stat-copy {
+    max-width: none;
+  }
+
+  .toolbar {
+    align-items: stretch;
+  }
+
+  .toolbar-actions {
+    width: 100%;
+  }
+
+  .toolbar-actions > * {
+    flex: 1 1 calc(50% - 0.5rem);
+    min-width: 0;
+  }
+
+  .search-shell {
+    max-width: none;
   }
 }
 
@@ -1245,6 +1309,12 @@ thead th {
 @media (max-width: 639px) {
   .app-main-inner {
     padding: 0.75rem;
+  }
+
+  .mobile-nav {
+    right: 0.75rem;
+    bottom: 0.75rem;
+    left: 0.75rem;
   }
 
   .app-header {

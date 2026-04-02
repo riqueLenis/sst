@@ -337,8 +337,8 @@ export default function Sectors() {
 
       {/* Sector Modal */}
       {isSectorModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
+        <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="my-6 bg-white rounded-2xl shadow-xl w-full max-h-[calc(100vh-2rem)] max-w-md overflow-y-auto animate-in zoom-in-95 duration-200">
             <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
               <h3 className="text-lg font-bold text-slate-900">
                 {editingSectorId ? "Editar Setor" : "Novo Setor"}
@@ -386,7 +386,7 @@ export default function Sectors() {
                   placeholder="Descreva as atividades do setor..."
                 />
               </div>
-              <div className="mt-8 flex justify-end gap-3 pt-4 border-t border-slate-100">
+              <div className="mt-8 flex flex-col-reverse gap-3 pt-4 border-t border-slate-100 sm:flex-row sm:justify-end">
                 <button
                   type="button"
                   onClick={() => setIsSectorModalOpen(false)}
@@ -408,8 +408,8 @@ export default function Sectors() {
 
       {/* Role Modal */}
       {isRoleModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
+        <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="my-6 bg-white rounded-2xl shadow-xl w-full max-h-[calc(100vh-2rem)] max-w-md overflow-y-auto animate-in zoom-in-95 duration-200">
             <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
               <h3 className="text-lg font-bold text-slate-900">
                 {editingRoleId ? "Editar Cargo" : "Novo Cargo"}
@@ -479,7 +479,7 @@ export default function Sectors() {
                   placeholder="Descreva as responsabilidades do cargo..."
                 />
               </div>
-              <div className="mt-8 flex justify-end gap-3 pt-4 border-t border-slate-100">
+              <div className="mt-8 flex flex-col-reverse gap-3 pt-4 border-t border-slate-100 sm:flex-row sm:justify-end">
                 <button
                   type="button"
                   onClick={() => setIsRoleModalOpen(false)}

@@ -219,7 +219,7 @@ export default function Companies() {
           </p>
         </div>
 
-        <div className="mobile-list mt-6 md:hidden">
+        <div className="mobile-list mt-6 lg:hidden">
           {filteredCompanies.map((company) => (
             <article key={company.id} className="mobile-record">
               <div className="mobile-record-header">
@@ -276,7 +276,7 @@ export default function Companies() {
           )}
         </div>
 
-        <div className="mt-6 hidden overflow-x-auto md:block">
+        <div className="mt-6 hidden overflow-x-auto lg:block">
           <table className="min-w-[860px] w-full text-left text-sm text-slate-600">
             <thead className="text-xs uppercase text-slate-500">
               <tr>
@@ -343,8 +343,8 @@ export default function Companies() {
       </section>
 
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/55 p-4 backdrop-blur-md">
-          <div className="w-full max-w-lg overflow-hidden rounded-[1.75rem] border border-white/75 bg-white/95 shadow-2xl shadow-slate-900/25">
+        <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-slate-900/55 p-4 backdrop-blur-md">
+          <div className="my-6 w-full max-h-[calc(100vh-2rem)] max-w-lg overflow-y-auto rounded-[1.75rem] border border-white/75 bg-white/95 shadow-2xl shadow-slate-900/25">
             <div className="flex items-center justify-between border-b border-slate-200/70 px-6 py-5">
               <div>
                 <p className="eyebrow">Cadastro</p>

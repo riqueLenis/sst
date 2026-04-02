@@ -750,7 +750,7 @@ export default function OccupationalHealth() {
       {/* Modals */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm overflow-y-auto animate-in fade-in duration-200">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden my-8 animate-in zoom-in-95 duration-200">
+          <div className="my-6 bg-white rounded-2xl shadow-xl w-full max-h-[calc(100vh-2rem)] max-w-md overflow-y-auto animate-in zoom-in-95 duration-200">
             <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center sticky top-0 bg-slate-50/90 backdrop-blur-sm z-10">
               <h3 className="text-lg font-bold text-slate-900">
                 {activeTab === "asos"
@@ -821,7 +821,7 @@ export default function OccupationalHealth() {
               {/* ASO Fields */}
               {activeTab === "asos" && (
                 <>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div>
                       <label className="block text-sm font-semibold text-slate-700 mb-1.5">
                         Tipo de ASO
@@ -864,7 +864,7 @@ export default function OccupationalHealth() {
                       </select>
                     </div>
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div>
                       <label className="block text-sm font-semibold text-slate-700 mb-1.5">
                         Data do Exame
@@ -894,7 +894,7 @@ export default function OccupationalHealth() {
                       />
                     </div>
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div>
                       <label className="block text-sm font-semibold text-slate-700 mb-1.5">
                         Médico
@@ -930,7 +930,7 @@ export default function OccupationalHealth() {
               {/* Absence Fields */}
               {activeTab === "absences" && (
                 <>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div>
                       <label className="block text-sm font-semibold text-slate-700 mb-1.5">
                         Motivo
@@ -971,7 +971,7 @@ export default function OccupationalHealth() {
                       />
                     </div>
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div>
                       <label className="block text-sm font-semibold text-slate-700 mb-1.5">
                         Data Início
@@ -1029,7 +1029,7 @@ export default function OccupationalHealth() {
               {/* Referral Fields */}
               {activeTab === "referrals" && (
                 <>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div>
                       <label className="block text-sm font-semibold text-slate-700 mb-1.5">
                         Data
@@ -1086,7 +1086,7 @@ export default function OccupationalHealth() {
                 </>
               )}
 
-              <div className="mt-8 flex justify-end gap-3 pt-4 border-t border-slate-100">
+              <div className="mt-8 flex flex-col-reverse gap-3 pt-4 border-t border-slate-100 sm:flex-row sm:justify-end">
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
