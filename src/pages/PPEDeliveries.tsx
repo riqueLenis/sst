@@ -1,7 +1,25 @@
 import React, { useState } from "react";
+import { Link } from "react-router-dom";
 import { useAppContext } from "../store/AppContext";
-import { Plus, ShieldCheck, FileText, Download, Search } from "lucide-react";
-import { createPdfDocument, exportTableToPDF } from "../lib/pdfUtils";
+import { Eye, Plus, ShieldCheck, FileText, Download, Search } from "lucide-react";
+import { exportTableToPDF } from "../lib/pdfUtils";
+import SignaturePad from "../components/SignaturePad";
+import type { PPEDelivery } from "../types";
+import {
+  formatPPEDeliverySignedAt,
+  generatePPEDeliveryPdf,
+} from "../lib/ppeDeliveryPdf";
+
+type DeliveryFormState = {
+  employeeId: string;
+  ppeId: string;
+  quantity: number;
+  deliveryDate: string;
+  reason: string;
+  status: "delivered";
+  employeeSignature: string;
+  signedAt: string;
+};
 
 export default function PPEDeliveries() {
   const {
@@ -14,22 +32,105 @@ export default function PPEDeliveries() {
   } = useAppContext();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [signatureError, setSignatureError] = useState<string | null>(null);
+  const [signatureFeedback, setSignatureFeedback] = useState<string | null>(null);
 
-  const initialFormState = {
+  const activeEmployees = employees.filter((employee) => employee.status === "active");
+  const availablePPEs = ppes.filter((ppe) => ppe.stockQuantity > 0);
+
+  const initialFormState: DeliveryFormState = {
     employeeId: "",
     ppeId: "",
     quantity: 1,
     deliveryDate: new Date().toISOString().split("T")[0],
     reason: "Substituição",
-    status: "delivered" as const,
+    status: "delivered",
+    employeeSignature: "",
+    signedAt: "",
   };
   const [formData, setFormData] = useState(initialFormState);
 
+  const selectedEmployee = employees.find(
+    (employee) => employee.id === formData.employeeId,
+  );
+
+  const resetForm = (overrides: Partial<DeliveryFormState> = {}) => {
+    setFormData({ ...initialFormState, ...overrides });
+    setSignatureError(null);
+    setSignatureFeedback(null);
+  };
+
+  const closeModal = () => {
+    setIsModalOpen(false);
+    resetForm();
+  };
+
+  const updateFormField = <K extends keyof DeliveryFormState>(
+    field: K,
+    value: DeliveryFormState[K],
+  ) => {
+    const shouldResetSignature =
+      field !== "employeeSignature" &&
+      field !== "signedAt" &&
+      Boolean(formData.employeeSignature) &&
+      formData[field] !== value;
+
+    setFormData((prev) => ({
+      ...prev,
+      [field]: value,
+      ...(shouldResetSignature
+        ? { employeeSignature: "", signedAt: "" }
+        : {}),
+    }));
+
+    if (shouldResetSignature) {
+      setSignatureError(
+        "A assinatura digital precisa ser refeita após alterar os dados da entrega.",
+      );
+      setSignatureFeedback(
+        "Assinatura removida porque os dados da entrega foram alterados.",
+      );
+    }
+  };
+
+  const handleSignatureChange = (signature: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      employeeSignature: signature,
+      signedAt: new Date().toISOString(),
+    }));
+    setSignatureError(null);
+    setSignatureFeedback(null);
+  };
+
+  const handleSignatureClear = () => {
+    setFormData((prev) => ({
+      ...prev,
+      employeeSignature: "",
+      signedAt: "",
+    }));
+    setSignatureError("Assinatura digital obrigatória para concluir a entrega.");
+    setSignatureFeedback("Assinatura removida. Refaça para liberar o salvamento.");
+  };
+
+  const openNewDeliveryModal = () => {
+    resetForm({
+      employeeId: activeEmployees[0]?.id ?? "",
+      ppeId: availablePPEs[0]?.id ?? "",
+    });
+    setIsModalOpen(true);
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!formData.employeeSignature) {
+      setSignatureError("Assinatura digital obrigatória para concluir a entrega.");
+      return;
+    }
+
     addPPEDelivery(formData);
-    setIsModalOpen(false);
-    setFormData(initialFormState);
+    closeModal();
   };
 
   const handleReturn = (id: string) => {
@@ -41,82 +142,28 @@ export default function PPEDeliveries() {
     }
   };
 
-  const generatePDF = (delivery: any) => {
-    void (async () => {
-      const employee = employees.find((e) => e.id === delivery.employeeId);
-      const ppe = ppes.find((p) => p.id === delivery.ppeId);
-      const company = companies.find((c) => c.id === employee?.companyId);
+  const generatePDF = (delivery: PPEDelivery) => {
+    const employee = employees.find((e) => e.id === delivery.employeeId);
+    const ppe = ppes.find((p) => p.id === delivery.ppeId);
+    const company = companies.find((c) => c.id === employee?.companyId);
 
-      if (!employee || !ppe || !company) return;
+    if (!employee || !ppe || !company) {
+      return;
+    }
 
-      const { doc, autoTable } = await createPdfDocument();
-
-      doc.setFontSize(18);
-      doc.setTextColor(15, 23, 42);
-      doc.text("Ficha de Entrega de EPI", 105, 20, { align: "center" });
-
-      doc.setFontSize(11);
-      doc.setTextColor(51, 65, 85);
-      doc.text(`Empresa: ${company.name}`, 14, 40);
-      doc.text(`CNPJ: ${company.cnpj}`, 14, 48);
-
-      doc.text(`Colaborador: ${employee.name}`, 14, 60);
-      doc.text(`CPF: ${employee.cpf}`, 14, 68);
-      doc.text(
-        `Data de Admissão: ${new Date(employee.admissionDate).toLocaleDateString("pt-BR")}`,
-        14,
-        76,
-      );
-
-      autoTable(doc, {
-        startY: 90,
-        head: [["EPI", "CA", "Qtd", "Data Entrega", "Motivo"]],
-        body: [
-          [
-            ppe.name,
-            ppe.ca,
-            delivery.quantity.toString(),
-            new Date(delivery.deliveryDate).toLocaleDateString("pt-BR"),
-            delivery.reason,
-          ],
-        ],
-        theme: "grid",
-        headStyles: {
-          fillColor: [37, 99, 235],
-          textColor: 255,
-          fontStyle: "bold",
-        },
-        styles: { fontSize: 10, cellPadding: 5 },
-      });
-
-      const finalY = (doc as any).lastAutoTable.finalY || 120;
-      doc.setFontSize(10);
-      doc.setTextColor(71, 85, 105);
-      const declarationText = `Declaro ter recebido da empresa ${company.name} os Equipamentos de Proteção Individual (EPI) constantes nesta ficha, comprometendo-me a usá-los apenas para a finalidade a que se destinam, responsabilizando-me por sua guarda e conservação, e a comunicar qualquer alteração que os torne impróprios para uso.`;
-
-      const splitText = doc.splitTextToSize(declarationText, 180);
-      doc.text(splitText, 14, finalY + 20);
-
-      doc.setDrawColor(203, 213, 225);
-      doc.line(40, finalY + 70, 170, finalY + 70);
-      doc.setTextColor(15, 23, 42);
-      doc.text(
-        `Assinatura do Colaborador: ${employee.name}`,
-        105,
-        finalY + 78,
-        {
-          align: "center",
-        },
-      );
-
-      doc.save(
-        `Ficha_EPI_${employee.name.replace(/\s+/g, "_")}_${delivery.deliveryDate}.pdf`,
-      );
-    })();
+    void generatePPEDeliveryPdf({ delivery, employee, ppe, company });
   };
 
   const handleExportListPDF = () => {
-    const columns = ["Data", "Colaborador", "EPI", "Qtd", "Motivo", "Status"];
+    const columns = [
+      "Data",
+      "Colaborador",
+      "EPI",
+      "Qtd",
+      "Motivo",
+      "Assinatura",
+      "Status",
+    ];
     const data = filteredDeliveries.map((d) => {
       const employee = employees.find((e) => e.id === d.employeeId);
       const ppe = ppes.find((p) => p.id === d.ppeId);
@@ -126,6 +173,7 @@ export default function PPEDeliveries() {
         ppe?.name || "N/A",
         d.quantity.toString(),
         d.reason,
+        d.employeeSignature ? "Digital capturada" : "Pendente",
         d.status === "delivered"
           ? "Entregue"
           : d.status === "returned"
@@ -177,14 +225,8 @@ export default function PPEDeliveries() {
             Exportar Lista (PDF)
           </button>
           <button
-            onClick={() => {
-              setFormData({
-                ...initialFormState,
-                employeeId: employees[0]?.id || "",
-                ppeId: ppes[0]?.id || "",
-              });
-              setIsModalOpen(true);
-            }}
+            onClick={openNewDeliveryModal}
+            disabled={activeEmployees.length === 0 || availablePPEs.length === 0}
             className="inline-flex items-center justify-center rounded-xl text-sm font-semibold transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:pointer-events-none disabled:opacity-50 bg-blue-600 text-white hover:bg-blue-700 shadow-sm shadow-blue-200 h-10 px-4 py-2"
           >
             <Plus className="w-4 h-4 mr-2" />
@@ -215,6 +257,7 @@ export default function PPEDeliveries() {
                 <th className="px-6 py-4">EPI</th>
                 <th className="px-6 py-4">Qtd</th>
                 <th className="px-6 py-4">Motivo</th>
+                <th className="px-6 py-4">Assinatura</th>
                 <th className="px-6 py-4">Status</th>
                 <th className="px-6 py-4 text-right">Ações</th>
               </tr>
@@ -247,6 +290,17 @@ export default function PPEDeliveries() {
                     <td className="px-6 py-4">
                       <span
                         className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold border ${
+                          delivery.employeeSignature
+                            ? "bg-emerald-50 text-emerald-700 border-emerald-100"
+                            : "bg-amber-50 text-amber-700 border-amber-100"
+                        }`}
+                      >
+                        {delivery.employeeSignature ? "Digital" : "Pendente"}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span
+                        className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold border ${
                           delivery.status === "delivered"
                             ? "bg-blue-50 text-blue-700 border-blue-100"
                             : delivery.status === "returned"
@@ -263,6 +317,13 @@ export default function PPEDeliveries() {
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-2">
+                        <Link
+                          to={`/entregas/${delivery.id}`}
+                          className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
+                          title="Ver detalhe da entrega"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </Link>
                         <button
                           onClick={() => generatePDF(delivery)}
                           className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
@@ -286,7 +347,7 @@ export default function PPEDeliveries() {
               {filteredDeliveries.length === 0 && (
                 <tr>
                   <td
-                    colSpan={7}
+                    colSpan={8}
                     className="px-6 py-12 text-center text-slate-500"
                   >
                     <div className="flex flex-col items-center justify-center">
@@ -314,7 +375,7 @@ export default function PPEDeliveries() {
                 Registrar Entrega de EPI
               </h3>
               <button
-                onClick={() => setIsModalOpen(false)}
+                onClick={closeModal}
                 className="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-100 transition-colors"
               >
                 <span className="sr-only">Fechar</span>
@@ -341,17 +402,13 @@ export default function PPEDeliveries() {
                 <select
                   required
                   value={formData.employeeId}
-                  onChange={(e) =>
-                    setFormData({ ...formData, employeeId: e.target.value })
-                  }
+                  onChange={(e) => updateFormField("employeeId", e.target.value)}
                   className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all bg-white"
                 >
                   <option value="" disabled>
                     Selecione um colaborador
                   </option>
-                  {employees
-                    .filter((e) => e.status === "active")
-                    .map((employee) => (
+                  {activeEmployees.map((employee) => (
                       <option key={employee.id} value={employee.id}>
                         {employee.name}
                       </option>
@@ -366,17 +423,13 @@ export default function PPEDeliveries() {
                 <select
                   required
                   value={formData.ppeId}
-                  onChange={(e) =>
-                    setFormData({ ...formData, ppeId: e.target.value })
-                  }
+                  onChange={(e) => updateFormField("ppeId", e.target.value)}
                   className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all bg-white"
                 >
                   <option value="" disabled>
                     Selecione um EPI
                   </option>
-                  {ppes
-                    .filter((p) => p.stockQuantity > 0)
-                    .map((ppe) => (
+                  {availablePPEs.map((ppe) => (
                       <option key={ppe.id} value={ppe.id}>
                         {ppe.name} (CA: {ppe.ca}) - Estoque: {ppe.stockQuantity}
                       </option>
@@ -395,10 +448,7 @@ export default function PPEDeliveries() {
                     required
                     value={formData.quantity}
                     onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        quantity: parseInt(e.target.value) || 1,
-                      })
+                      updateFormField("quantity", parseInt(e.target.value) || 1)
                     }
                     className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                   />
@@ -412,7 +462,7 @@ export default function PPEDeliveries() {
                     required
                     value={formData.deliveryDate}
                     onChange={(e) =>
-                      setFormData({ ...formData, deliveryDate: e.target.value })
+                      updateFormField("deliveryDate", e.target.value)
                     }
                     className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                   />
@@ -426,9 +476,7 @@ export default function PPEDeliveries() {
                 <select
                   required
                   value={formData.reason}
-                  onChange={(e) =>
-                    setFormData({ ...formData, reason: e.target.value })
-                  }
+                  onChange={(e) => updateFormField("reason", e.target.value)}
                   className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all bg-white"
                 >
                   <option value="Admissão">Admissão</option>
@@ -439,20 +487,46 @@ export default function PPEDeliveries() {
                 </select>
               </div>
 
+              <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
+                <SignaturePad
+                  value={formData.employeeSignature}
+                  signerName={selectedEmployee?.name}
+                  onChange={handleSignatureChange}
+                  onClear={handleSignatureClear}
+                  error={signatureError}
+                />
+
+                {formData.signedAt && (
+                  <p className="mt-3 text-xs font-medium text-emerald-700">
+                    Assinatura capturada em {formatPPEDeliverySignedAt(formData.signedAt)}.
+                  </p>
+                )}
+
+                {signatureFeedback && !formData.employeeSignature && (
+                  <p className="mt-2 text-xs font-medium text-amber-700">
+                    {signatureFeedback}
+                  </p>
+                )}
+              </div>
+
               <div className="mt-8 flex flex-col-reverse gap-3 pt-4 border-t border-slate-100 sm:flex-row sm:justify-end">
                 <button
                   type="button"
-                  onClick={() => setIsModalOpen(false)}
+                  onClick={closeModal}
                   className="px-4 py-2 text-sm font-semibold text-slate-700 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  disabled={!formData.employeeId || !formData.ppeId}
+                  disabled={
+                    !formData.employeeId ||
+                    !formData.ppeId ||
+                    !formData.employeeSignature
+                  }
                   className="px-4 py-2 text-sm font-semibold text-white bg-blue-600 border border-transparent rounded-xl hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm shadow-blue-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Registrar Entrega
+                  Registrar Entrega com Assinatura
                 </button>
               </div>
             </form>

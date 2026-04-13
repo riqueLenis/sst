@@ -416,6 +416,11 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
 
   const addPPEDelivery = (delivery: Omit<PPEDelivery, "id">) => {
     setState((prev) => {
+      if (!delivery.employeeSignature?.trim()) {
+        console.warn("PPEDelivery requires an employee digital signature");
+        return prev;
+      }
+
       // Decrease PPE stock
       const updatedPPEs = prev.ppes.map((p) => {
         if (p.id === delivery.ppeId) {
@@ -428,7 +433,11 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
         ppes: updatedPPEs,
         ppeDeliveries: [
           ...prev.ppeDeliveries,
-          { ...delivery, id: generateId() },
+          {
+            ...delivery,
+            signedAt: delivery.signedAt ?? new Date().toISOString(),
+            id: generateId(),
+          },
         ],
       };
     });

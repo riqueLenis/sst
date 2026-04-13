@@ -48,6 +48,8 @@ export interface PPEDelivery {
   returnDate?: string;
   reason: string;
   status: "delivered" | "returned" | "lost";
+  employeeSignature?: string;
+  signedAt?: string;
 }
 
 export interface Transaction {

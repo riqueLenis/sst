@@ -96,6 +96,15 @@ function getRouteContext(pathname: string) {
     };
   }
 
+  if (pathname.startsWith("/entregas/")) {
+    return {
+      section: "Entregas de EPI",
+      label: "Detalhe da entrega",
+      description:
+        "Conferência do registro, assinatura digital do colaborador e ficha operacional da entrega.",
+    };
+  }
+
   const currentItem = navItems.find(
     (item) =>
       pathname === item.path ||
