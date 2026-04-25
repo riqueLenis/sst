@@ -140,8 +140,8 @@ export default function FacePhotoCapture({
             Captura facial do colaborador
           </p>
           <p className="mt-1 text-xs text-slate-500">
-            No celular, a câmera frontal abre quando o navegador suporta.
-            Em computadores sem webcam, selecione uma foto manualmente.
+            No celular, a câmera frontal abre quando o navegador suporta. Em
+            computadores sem webcam, selecione uma foto manualmente.
           </p>
           {subjectName && (
             <p className="mt-1 text-xs font-medium text-slate-600">
@@ -216,7 +216,9 @@ export default function FacePhotoCapture({
       </div>
 
       <div className="flex flex-col gap-1 text-xs">
-        <p className={value ? "font-medium text-emerald-700" : "text-slate-500"}>
+        <p
+          className={value ? "font-medium text-emerald-700" : "text-slate-500"}
+        >
           {isProcessing
             ? "Processando foto capturada..."
             : value

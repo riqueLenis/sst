@@ -1,7 +1,14 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { useAppContext } from "../store/AppContext";
-import { Eye, Plus, ShieldCheck, FileText, Download, Search } from "lucide-react";
+import {
+  Eye,
+  Plus,
+  ShieldCheck,
+  FileText,
+  Download,
+  Search,
+} from "lucide-react";
 import { exportTableToPDF } from "../lib/pdfUtils";
 import FacePhotoCapture from "../components/FacePhotoCapture";
 import SignaturePad from "../components/SignaturePad";
@@ -36,11 +43,17 @@ export default function PPEDeliveries() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [signatureError, setSignatureError] = useState<string | null>(null);
-  const [signatureFeedback, setSignatureFeedback] = useState<string | null>(null);
+  const [signatureFeedback, setSignatureFeedback] = useState<string | null>(
+    null,
+  );
   const [facePhotoError, setFacePhotoError] = useState<string | null>(null);
-  const [facePhotoFeedback, setFacePhotoFeedback] = useState<string | null>(null);
+  const [facePhotoFeedback, setFacePhotoFeedback] = useState<string | null>(
+    null,
+  );
 
-  const activeEmployees = employees.filter((employee) => employee.status === "active");
+  const activeEmployees = employees.filter(
+    (employee) => employee.status === "active",
+  );
   const availablePPEs = ppes.filter((ppe) => ppe.stockQuantity > 0);
 
   const initialFormState: DeliveryFormState = {
@@ -83,7 +96,8 @@ export default function PPEDeliveries() {
       field !== "signedAt" &&
       field !== "employeeFacePhoto" &&
       field !== "facePhotoCapturedAt" &&
-      (Boolean(formData.employeeSignature) || Boolean(formData.employeeFacePhoto)) &&
+      (Boolean(formData.employeeSignature) ||
+        Boolean(formData.employeeFacePhoto)) &&
       formData[field] !== value;
 
     setFormData((prev) => ({
@@ -141,8 +155,12 @@ export default function PPEDeliveries() {
       employeeSignature: "",
       signedAt: "",
     }));
-    setSignatureError("Assinatura digital obrigatória para concluir a entrega.");
-    setSignatureFeedback("Assinatura removida. Refaça para liberar o salvamento.");
+    setSignatureError(
+      "Assinatura digital obrigatória para concluir a entrega.",
+    );
+    setSignatureFeedback(
+      "Assinatura removida. Refaça para liberar o salvamento.",
+    );
   };
 
   const handleFacePhotoClear = () => {
@@ -152,7 +170,9 @@ export default function PPEDeliveries() {
       facePhotoCapturedAt: "",
     }));
     setFacePhotoError("Foto facial obrigatória para concluir a entrega.");
-    setFacePhotoFeedback("Foto facial removida. Capture novamente para liberar o salvamento.");
+    setFacePhotoFeedback(
+      "Foto facial removida. Capture novamente para liberar o salvamento.",
+    );
   };
 
   const openNewDeliveryModal = () => {
@@ -169,7 +189,9 @@ export default function PPEDeliveries() {
     let hasError = false;
 
     if (!formData.employeeSignature) {
-      setSignatureError("Assinatura digital obrigatória para concluir a entrega.");
+      setSignatureError(
+        "Assinatura digital obrigatória para concluir a entrega.",
+      );
       hasError = true;
     }
 
@@ -281,7 +303,9 @@ export default function PPEDeliveries() {
           </button>
           <button
             onClick={openNewDeliveryModal}
-            disabled={activeEmployees.length === 0 || availablePPEs.length === 0}
+            disabled={
+              activeEmployees.length === 0 || availablePPEs.length === 0
+            }
             className="inline-flex items-center justify-center rounded-xl text-sm font-semibold transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:pointer-events-none disabled:opacity-50 bg-blue-600 text-white hover:bg-blue-700 shadow-sm shadow-blue-200 h-10 px-4 py-2"
           >
             <Plus className="w-4 h-4 mr-2" />
@@ -469,17 +493,19 @@ export default function PPEDeliveries() {
                 <select
                   required
                   value={formData.employeeId}
-                  onChange={(e) => updateFormField("employeeId", e.target.value)}
+                  onChange={(e) =>
+                    updateFormField("employeeId", e.target.value)
+                  }
                   className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all bg-white"
                 >
                   <option value="" disabled>
                     Selecione um colaborador
                   </option>
                   {activeEmployees.map((employee) => (
-                      <option key={employee.id} value={employee.id}>
-                        {employee.name}
-                      </option>
-                    ))}
+                    <option key={employee.id} value={employee.id}>
+                      {employee.name}
+                    </option>
+                  ))}
                 </select>
               </div>
 
@@ -497,10 +523,10 @@ export default function PPEDeliveries() {
                     Selecione um EPI
                   </option>
                   {availablePPEs.map((ppe) => (
-                      <option key={ppe.id} value={ppe.id}>
-                        {ppe.name} (CA: {ppe.ca}) - Estoque: {ppe.stockQuantity}
-                      </option>
-                    ))}
+                    <option key={ppe.id} value={ppe.id}>
+                      {ppe.name} (CA: {ppe.ca}) - Estoque: {ppe.stockQuantity}
+                    </option>
+                  ))}
                 </select>
               </div>
 
@@ -565,7 +591,8 @@ export default function PPEDeliveries() {
 
                 {formData.signedAt && (
                   <p className="mt-3 text-xs font-medium text-emerald-700">
-                    Assinatura capturada em {formatPPEDeliverySignedAt(formData.signedAt)}.
+                    Assinatura capturada em{" "}
+                    {formatPPEDeliverySignedAt(formData.signedAt)}.
                   </p>
                 )}
 
@@ -587,7 +614,8 @@ export default function PPEDeliveries() {
 
                 {formData.facePhotoCapturedAt && (
                   <p className="mt-3 text-xs font-medium text-emerald-700">
-                    Foto facial capturada em {formatPPEDeliverySignedAt(formData.facePhotoCapturedAt)}.
+                    Foto facial capturada em{" "}
+                    {formatPPEDeliverySignedAt(formData.facePhotoCapturedAt)}.
                   </p>
                 )}
 

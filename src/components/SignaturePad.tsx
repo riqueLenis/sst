@@ -237,7 +237,9 @@ export default function SignaturePad({
       </div>
 
       <div className="flex flex-col gap-1 text-xs">
-        <p className={value ? "font-medium text-emerald-700" : "text-slate-500"}>
+        <p
+          className={value ? "font-medium text-emerald-700" : "text-slate-500"}
+        >
           {value
             ? "Assinatura registrada. Altere qualquer dado da entrega e assine novamente."
             : "A assinatura é obrigatória para concluir a entrega."}

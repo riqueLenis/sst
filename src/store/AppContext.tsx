@@ -610,7 +610,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
 export const useAppContext = () => {
   const context = useContext(AppContext);
   if (context === undefined) {
-    throw new Error("metodo useAppContext é pra ser usado dentro do AppProvider");
+    throw new Error(
+      "metodo useAppContext é pra ser usado dentro do AppProvider",
+    );
   }
   return context;
 };

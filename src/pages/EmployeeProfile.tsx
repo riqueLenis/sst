@@ -124,9 +124,14 @@ export default function EmployeeProfile() {
       doc.setDrawColor(203, 213, 225);
       doc.line(40, finalY + 70, 170, finalY + 70);
       doc.setTextColor(15, 23, 42);
-      doc.text(`Assinatura do Colaborador: ${employee.name}`, 105, finalY + 78, {
-        align: "center",
-      });
+      doc.text(
+        `Assinatura do Colaborador: ${employee.name}`,
+        105,
+        finalY + 78,
+        {
+          align: "center",
+        },
+      );
 
       doc.save(`Historico_EPI_${employee.name.replace(/\s+/g, "_")}.pdf`);
     })();

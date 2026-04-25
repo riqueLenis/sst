@@ -14,6 +14,9 @@ import {
   Clock,
 } from "lucide-react";
 import { exportTableToPDF } from "../lib/pdfUtils";
+import type { Transaction } from "../types";
+
+type TransactionFormState = Omit<Transaction, "id">;
 
 export default function Financial() {
   const {
@@ -29,7 +32,7 @@ export default function Financial() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
 
-  const initialFormState = {
+  const initialFormState: TransactionFormState = {
     companyId: "",
     type: "income" as const,
     amount: 0,
@@ -39,7 +42,9 @@ export default function Financial() {
     status: "pending" as const,
     category: "Faturamento",
   };
-  const [formData, setFormData] = useState(initialFormState);
+  const [formData, setFormData] = useState<TransactionFormState>(
+    initialFormState,
+  );
 
   // Metrics
   const totalIncome = transactions

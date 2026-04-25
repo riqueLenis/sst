@@ -79,7 +79,9 @@ export default function PPEDeliveryDetail() {
       <section className="page-hero">
         <div className="hero-card">
           <span className="hero-accent">Detalhe da entrega</span>
-          <h1 className="hero-title">Assinatura e conferência da entrega de EPI</h1>
+          <h1 className="hero-title">
+            Assinatura e conferência da entrega de EPI
+          </h1>
           <p className="hero-description">
             Registro completo da entrega realizada para {employee.name}, com
             visualização da assinatura digital, captura facial vinculada, dados
@@ -94,7 +96,12 @@ export default function PPEDeliveryDetail() {
             <button
               type="button"
               onClick={() =>
-                void generatePPEDeliveryPdf({ delivery, employee, ppe, company })
+                void generatePPEDeliveryPdf({
+                  delivery,
+                  employee,
+                  ppe,
+                  company,
+                })
               }
               className="btn-primary"
             >
@@ -164,7 +171,9 @@ export default function PPEDeliveryDetail() {
                 <p className="hero-stat-label">Quantidade entregue</p>
                 <p className="hero-stat-value text-2xl">{delivery.quantity}</p>
               </div>
-              <p className="hero-stat-copy">Motivo informado: {delivery.reason}.</p>
+              <p className="hero-stat-copy">
+                Motivo informado: {delivery.reason}.
+              </p>
             </div>
           </div>
         </aside>
@@ -199,9 +208,15 @@ export default function PPEDeliveryDetail() {
                 </div>
 
                 <div className="mt-4 rounded-2xl border border-emerald-100 bg-emerald-50/80 p-4 text-sm text-emerald-800">
-                  <p className="font-semibold">Foto facial validada no registro</p>
+                  <p className="font-semibold">
+                    Foto facial validada no registro
+                  </p>
                   <p className="mt-1">
-                    Captura realizada em {formatPPEDeliverySignedAt(delivery.facePhotoCapturedAt ?? delivery.deliveryDate)}.
+                    Captura realizada em{" "}
+                    {formatPPEDeliverySignedAt(
+                      delivery.facePhotoCapturedAt ?? delivery.deliveryDate,
+                    )}
+                    .
                   </p>
                 </div>
               </div>
@@ -209,8 +224,8 @@ export default function PPEDeliveryDetail() {
               <div className="rounded-3xl border border-amber-100 bg-amber-50/80 p-5 text-sm text-amber-800">
                 <p className="font-semibold">Foto facial não disponível</p>
                 <p className="mt-1">
-                  Este registro é anterior à obrigatoriedade da captura facial ou
-                  não possui imagem vinculada.
+                  Este registro é anterior à obrigatoriedade da captura facial
+                  ou não possui imagem vinculada.
                 </p>
               </div>
             )}
@@ -232,9 +247,15 @@ export default function PPEDeliveryDetail() {
                 </div>
 
                 <div className="rounded-3xl border border-emerald-100 bg-emerald-50/80 p-4 text-sm text-emerald-800">
-                  <p className="font-semibold">Assinatura digital validada no registro</p>
+                  <p className="font-semibold">
+                    Assinatura digital validada no registro
+                  </p>
                   <p className="mt-1">
-                    Captura realizada em {formatPPEDeliverySignedAt(delivery.signedAt ?? delivery.deliveryDate)}.
+                    Captura realizada em{" "}
+                    {formatPPEDeliverySignedAt(
+                      delivery.signedAt ?? delivery.deliveryDate,
+                    )}
+                    .
                   </p>
                 </div>
               </div>
@@ -242,8 +263,8 @@ export default function PPEDeliveryDetail() {
               <div className="rounded-3xl border border-amber-100 bg-amber-50/80 p-5 text-sm text-amber-800">
                 <p className="font-semibold">Assinatura não disponível</p>
                 <p className="mt-1">
-                  Este registro é anterior à obrigatoriedade de assinatura digital
-                  ou não possui imagem vinculada.
+                  Este registro é anterior à obrigatoriedade de assinatura
+                  digital ou não possui imagem vinculada.
                 </p>
               </div>
             )}
@@ -264,9 +285,20 @@ export default function PPEDeliveryDetail() {
               </div>
 
               <div className="space-y-2 text-sm text-slate-600">
-                <p><span className="font-semibold text-slate-800">CNPJ:</span> {company.cnpj}</p>
-                <p><span className="font-semibold text-slate-800">Contato:</span> {company.contact}</p>
-                <p><span className="font-semibold text-slate-800">Endereço:</span> {company.address}</p>
+                <p>
+                  <span className="font-semibold text-slate-800">CNPJ:</span>{" "}
+                  {company.cnpj}
+                </p>
+                <p>
+                  <span className="font-semibold text-slate-800">Contato:</span>{" "}
+                  {company.contact}
+                </p>
+                <p>
+                  <span className="font-semibold text-slate-800">
+                    Endereço:
+                  </span>{" "}
+                  {company.address}
+                </p>
               </div>
             </div>
 
@@ -286,9 +318,20 @@ export default function PPEDeliveryDetail() {
               </div>
 
               <div className="space-y-2 text-sm text-slate-600">
-                <p><span className="font-semibold text-slate-800">CA:</span> {ppe.ca}</p>
-                <p><span className="font-semibold text-slate-800">Quantidade:</span> {delivery.quantity}</p>
-                <p><span className="font-semibold text-slate-800">Motivo:</span> {delivery.reason}</p>
+                <p>
+                  <span className="font-semibold text-slate-800">CA:</span>{" "}
+                  {ppe.ca}
+                </p>
+                <p>
+                  <span className="font-semibold text-slate-800">
+                    Quantidade:
+                  </span>{" "}
+                  {delivery.quantity}
+                </p>
+                <p>
+                  <span className="font-semibold text-slate-800">Motivo:</span>{" "}
+                  {delivery.reason}
+                </p>
               </div>
             </div>
 
@@ -313,13 +356,17 @@ export default function PPEDeliveryDetail() {
                   {new Date(delivery.deliveryDate).toLocaleDateString("pt-BR")}
                 </p>
                 <p>
-                  <span className="font-semibold text-slate-800">Assinatura:</span>{" "}
+                  <span className="font-semibold text-slate-800">
+                    Assinatura:
+                  </span>{" "}
                   {delivery.signedAt
                     ? formatPPEDeliverySignedAt(delivery.signedAt)
                     : "Não registrada"}
                 </p>
                 <p>
-                  <span className="font-semibold text-slate-800">Devolução:</span>{" "}
+                  <span className="font-semibold text-slate-800">
+                    Devolução:
+                  </span>{" "}
                   {delivery.returnDate
                     ? new Date(delivery.returnDate).toLocaleDateString("pt-BR")
                     : "Ainda não devolvido"}
@@ -358,9 +405,15 @@ export default function PPEDeliveryDetail() {
               </div>
 
               <div className="rounded-[1.4rem] border border-emerald-100 bg-emerald-50/80 p-4 text-sm text-emerald-800">
-                <p className="font-semibold">Assinatura digital validada no registro</p>
+                <p className="font-semibold">
+                  Assinatura digital validada no registro
+                </p>
                 <p className="mt-1">
-                  Captura realizada em {formatPPEDeliverySignedAt(delivery.signedAt ?? delivery.deliveryDate)}.
+                  Captura realizada em{" "}
+                  {formatPPEDeliverySignedAt(
+                    delivery.signedAt ?? delivery.deliveryDate,
+                  )}
+                  .
                 </p>
               </div>
             </div>

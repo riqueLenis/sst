@@ -36,11 +36,14 @@ export default function Dashboard() {
     asos,
   } = useAppContext();
 
-  const activeEmployees = employees.filter((employee) => employee.status === "active").length;
+  const activeEmployees = employees.filter(
+    (employee) => employee.status === "active",
+  ).length;
   const lowStockCount = ppes.filter((ppe) => ppe.stockQuantity < 20).length;
   const expiredProgramsCount = documents.filter(
     (document) =>
-      document.status === "expired" || new Date(document.validUntil) < new Date(),
+      document.status === "expired" ||
+      new Date(document.validUntil) < new Date(),
   ).length;
   const expiredAsosCount = asos.filter(
     (aso) => new Date(aso.validUntil) < new Date(),
@@ -123,7 +126,8 @@ export default function Dashboard() {
           ? `${company.name.slice(0, 16)}...`
           : company.name,
       Colaboradores: employees.filter(
-        (employee) => employee.companyId === company.id && employee.status === "active",
+        (employee) =>
+          employee.companyId === company.id && employee.status === "active",
       ).length,
     }))
     .filter((item) => item.Colaboradores > 0)
@@ -225,9 +229,7 @@ export default function Dashboard() {
                 <p className="metric-value">{stat.value}</p>
               </div>
 
-              <div
-                className={`metric-icon bg-linear-to-br ${stat.color}`}
-              >
+              <div className={`metric-icon bg-linear-to-br ${stat.color}`}>
                 <stat.icon className="h-5 w-5" aria-hidden="true" />
               </div>
             </div>
@@ -355,9 +357,12 @@ export default function Dashboard() {
               .reverse()
               .map((delivery) => {
                 const employee = employees.find(
-                  (currentEmployee) => currentEmployee.id === delivery.employeeId,
+                  (currentEmployee) =>
+                    currentEmployee.id === delivery.employeeId,
                 );
-                const ppe = ppes.find((currentPpe) => currentPpe.id === delivery.ppeId);
+                const ppe = ppes.find(
+                  (currentPpe) => currentPpe.id === delivery.ppeId,
+                );
 
                 return (
                   <li
@@ -373,13 +378,16 @@ export default function Dashboard() {
                           {employee?.name ?? "Colaborador não encontrado"}
                         </p>
                         <p className="truncate text-sm text-slate-500">
-                          {ppe?.name ?? "EPI desconhecido"} ({delivery.quantity} un)
+                          {ppe?.name ?? "EPI desconhecido"} ({delivery.quantity}{" "}
+                          un)
                         </p>
                       </div>
                     </div>
 
                     <span className="status-pill border border-emerald-100 bg-emerald-50 text-emerald-700">
-                      {new Date(delivery.deliveryDate).toLocaleDateString("pt-BR")}
+                      {new Date(delivery.deliveryDate).toLocaleDateString(
+                        "pt-BR",
+                      )}
                     </span>
                   </li>
                 );

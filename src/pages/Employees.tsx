@@ -13,6 +13,8 @@ import { useAppContext } from "../store/AppContext";
 import { exportTableToPDF } from "../lib/pdfUtils";
 import type { Employee } from "../types";
 
+type EmployeeFormState = Omit<Employee, "id">;
+
 export default function Employees() {
   const {
     employees,
@@ -26,7 +28,7 @@ export default function Employees() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
 
-  const initialFormState = {
+  const initialFormState: EmployeeFormState = {
     name: "",
     cpf: "",
     rg: "",
@@ -37,7 +39,7 @@ export default function Employees() {
     status: "active" as const,
   };
 
-  const [formData, setFormData] = useState(initialFormState);
+  const [formData, setFormData] = useState<EmployeeFormState>(initialFormState);
 
   const filteredEmployees = employees.filter(
     (employee) =>
@@ -260,7 +262,9 @@ export default function Employees() {
 
         <div className="mobile-list mt-6 lg:hidden">
           {filteredEmployees.map((employee) => {
-            const company = companies.find((item) => item.id === employee.companyId);
+            const company = companies.find(
+              (item) => item.id === employee.companyId,
+            );
             const role = roles.find((item) => item.id === employee.roleId);
 
             return (
@@ -329,9 +333,7 @@ export default function Employees() {
           {filteredEmployees.length === 0 && (
             <div className="empty-state rounded-[1.4rem] border border-dashed border-slate-200 bg-slate-50/70">
               <Users className="h-10 w-10 text-slate-300" />
-              <p className="empty-state-title">
-                Nenhum colaborador encontrado
-              </p>
+              <p className="empty-state-title">Nenhum colaborador encontrado</p>
               <p className="empty-state-copy">
                 Ajuste sua busca ou cadastre um novo colaborador para continuar.
               </p>
@@ -340,7 +342,7 @@ export default function Employees() {
         </div>
 
         <div className="mt-6 hidden overflow-x-auto lg:block">
-          <table className="min-w-[960px] w-full text-left text-sm text-slate-600">
+          <table className="min-w-240 w-full text-left text-sm text-slate-600">
             <thead className="text-xs uppercase text-slate-500">
               <tr>
                 <th className="px-6 py-4">Colaborador</th>
@@ -353,7 +355,9 @@ export default function Employees() {
             </thead>
             <tbody className="divide-y divide-slate-100">
               {filteredEmployees.map((employee) => {
-                const company = companies.find((item) => item.id === employee.companyId);
+                const company = companies.find(
+                  (item) => item.id === employee.companyId,
+                );
                 const role = roles.find((item) => item.id === employee.roleId);
 
                 return (
@@ -372,8 +376,12 @@ export default function Employees() {
                       </div>
                     </td>
                     <td className="px-6 py-4">{employee.cpf}</td>
-                    <td className="px-6 py-4">{company?.name ?? "Não definida"}</td>
-                    <td className="px-6 py-4">{role?.name ?? "Não definido"}</td>
+                    <td className="px-6 py-4">
+                      {company?.name ?? "Não definida"}
+                    </td>
+                    <td className="px-6 py-4">
+                      {role?.name ?? "Não definido"}
+                    </td>
                     <td className="px-6 py-4">
                       <span
                         className={
@@ -516,7 +524,10 @@ export default function Employees() {
                     required
                     value={formData.birthDate}
                     onChange={(event) =>
-                      setFormData({ ...formData, birthDate: event.target.value })
+                      setFormData({
+                        ...formData,
+                        birthDate: event.target.value,
+                      })
                     }
                     className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm"
                   />
@@ -548,7 +559,10 @@ export default function Employees() {
                     required
                     value={formData.companyId}
                     onChange={(event) =>
-                      setFormData({ ...formData, companyId: event.target.value })
+                      setFormData({
+                        ...formData,
+                        companyId: event.target.value,
+                      })
                     }
                     className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm"
                   >

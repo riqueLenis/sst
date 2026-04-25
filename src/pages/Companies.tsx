@@ -127,11 +127,7 @@ export default function Companies() {
           </p>
 
           <div className="hero-actions">
-            <button
-              onClick={resetModal}
-              className="btn-primary"
-              type="button"
-            >
+            <button onClick={resetModal} className="btn-primary" type="button">
               <Plus className="h-4 w-4" />
               Nova empresa
             </button>
@@ -191,11 +187,7 @@ export default function Companies() {
               <Download className="h-4 w-4" />
               Exportar PDF
             </button>
-            <button
-              onClick={resetModal}
-              className="btn-primary"
-              type="button"
-            >
+            <button onClick={resetModal} className="btn-primary" type="button">
               <Plus className="h-4 w-4" />
               Nova empresa
             </button>
@@ -277,7 +269,7 @@ export default function Companies() {
         </div>
 
         <div className="mt-6 hidden overflow-x-auto lg:block">
-          <table className="min-w-[860px] w-full text-left text-sm text-slate-600">
+          <table className="min-w-215 w-full text-left text-sm text-slate-600">
             <thead className="text-xs uppercase text-slate-500">
               <tr>
                 <th className="px-6 py-4">Nome Fantasia / Razão Social</th>

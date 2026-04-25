@@ -63,8 +63,9 @@ export const generatePPEDeliveryPdf = async ({
     styles: { fontSize: 10, cellPadding: 5 },
   });
 
-  const finalY = (doc as { lastAutoTable?: { finalY?: number } }).lastAutoTable
-    ?.finalY ?? 120;
+  const finalY =
+    (doc as { lastAutoTable?: { finalY?: number } }).lastAutoTable?.finalY ??
+    120;
   doc.setFontSize(10);
   doc.setTextColor(71, 85, 105);
   const declarationText = `Declaro ter recebido da empresa ${company.name} os Equipamentos de Proteção Individual (EPI) constantes nesta ficha, comprometendo-me a usá-los apenas para a finalidade a que se destinam, responsabilizando-me por sua guarda e conservação, e a comunicar qualquer alteração que os torne impróprios para uso.`;
@@ -155,9 +156,14 @@ export const generatePPEDeliveryPdf = async ({
     ensureSpace(28);
     doc.line(40, currentY + 12, 170, currentY + 12);
     doc.setTextColor(15, 23, 42);
-    doc.text(`Assinatura do Colaborador: ${employee.name}`, 105, currentY + 20, {
-      align: "center",
-    });
+    doc.text(
+      `Assinatura do Colaborador: ${employee.name}`,
+      105,
+      currentY + 20,
+      {
+        align: "center",
+      },
+    );
   }
 
   doc.save(
