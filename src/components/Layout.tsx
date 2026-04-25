@@ -10,6 +10,7 @@ import {
   FileSignature,
   HardHat,
   LayoutDashboard,
+  LoaderCircle,
   LogOut,
   Menu,
   ShieldCheck,
@@ -19,6 +20,7 @@ import {
   Users,
   X,
 } from "lucide-react";
+import { apiClient } from "../lib/apiClient";
 import { cn } from "../lib/utils";
 import { useAuth } from "../store/AuthContext";
 
@@ -124,8 +126,9 @@ function getRouteContext(pathname: string) {
 
 export default function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const location = useLocation();
-  const { logout, user } = useAuth();
+  const { logout, token, user } = useAuth();
   const routeContext = useMemo(
     () => getRouteContext(location.pathname),
     [location.pathname],
@@ -164,6 +167,26 @@ export default function Layout() {
   useEffect(() => {
     setSidebarOpen(false);
   }, [location.pathname]);
+
+  const handleLogout = async () => {
+    if (isLoggingOut) {
+      return;
+    }
+
+    setIsLoggingOut(true);
+
+    try {
+      if (token) {
+        await apiClient.post("/api/auth/logout", undefined, {
+          token,
+        });
+      }
+    } catch {
+      // The local session must still be cleared even if the API request fails.
+    }
+
+    logout();
+  };
 
   return (
     <div className="app-shell">
@@ -240,6 +263,36 @@ export default function Layout() {
                 </span>
               </NavLink>
             ))}
+
+            <div className="mt-auto pt-3">
+              <button
+                type="button"
+                onClick={() => {
+                  void handleLogout();
+                }}
+                className={cn(
+                  "nav-link w-full text-left",
+                  isLoggingOut && "pointer-events-none opacity-70",
+                )}
+                aria-label="Sair do sistema"
+                title="Encerrar sessão"
+                disabled={isLoggingOut}
+              >
+                {isLoggingOut ? (
+                  <LoaderCircle className="nav-link-icon h-5 w-5 animate-spin" />
+                ) : (
+                  <LogOut className="nav-link-icon h-5 w-5" />
+                )}
+                <span className="nav-link-copy sidebar-expandable">
+                  <span className="nav-link-title">
+                    {isLoggingOut ? "Saindo..." : "Sair"}
+                  </span>
+                  <span className="nav-link-description">
+                    Encerra a sessão atual com segurança.
+                  </span>
+                </span>
+              </button>
+            </div>
           </nav>
 
           <div className="sidebar-expandable-block">
@@ -305,13 +358,23 @@ export default function Layout() {
               </div>
 
               <button
-                className="app-icon-button"
+                className={cn(
+                  "app-icon-button",
+                  isLoggingOut && "pointer-events-none opacity-70",
+                )}
                 type="button"
-                aria-label="Sair"
-                onClick={logout}
-                title="Encerrar sessão"
+                aria-label={isLoggingOut ? "Encerrando sessão" : "Sair"}
+                onClick={() => {
+                  void handleLogout();
+                }}
+                title={isLoggingOut ? "Encerrando sessão" : "Encerrar sessão"}
+                disabled={isLoggingOut}
               >
-                <LogOut className="h-5 w-5" />
+                {isLoggingOut ? (
+                  <LoaderCircle className="h-5 w-5 animate-spin" />
+                ) : (
+                  <LogOut className="h-5 w-5" />
+                )}
               </button>
             </div>
           </header>
