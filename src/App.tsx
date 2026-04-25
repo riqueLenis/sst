@@ -1,6 +1,8 @@
 import React, { Suspense, lazy } from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { ShieldCheck } from "lucide-react";
+import ProtectedRoute from "./components/ProtectedRoute";
+import { AuthProvider } from "./store/AuthContext";
 import { AppProvider } from "./store/AppContext";
 const Layout = lazy(() => import("./components/Layout"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
@@ -14,6 +16,7 @@ const PPEDeliveryDetail = lazy(() => import("./pages/PPEDeliveryDetail"));
 const Financial = lazy(() => import("./pages/Financial"));
 const Programs = lazy(() => import("./pages/Programs"));
 const OccupationalHealth = lazy(() => import("./pages/OccupationalHealth"));
+const Login = lazy(() => import("./pages/Login"));
 
 function AppFallback() {
   return (
@@ -67,27 +70,36 @@ function AppFallback() {
 }
 
 export default function App() {
-  return (
+  const ProtectedApp = () => (
     <AppProvider>
+      <Layout />
+    </AppProvider>
+  );
+
+  return (
+    <AuthProvider>
       <Router>
         <Suspense fallback={<AppFallback />}>
           <Routes>
-            <Route path="/" element={<Layout />}>
-              <Route index element={<Dashboard />} />
-              <Route path="empresas" element={<Companies />} />
-              <Route path="setores" element={<Sectors />} />
-              <Route path="colaboradores" element={<Employees />} />
-              <Route path="colaboradores/:id" element={<EmployeeProfile />} />
-              <Route path="epis" element={<PPEs />} />
-              <Route path="entregas" element={<PPEDeliveries />} />
-              <Route path="entregas/:id" element={<PPEDeliveryDetail />} />
-              <Route path="saude" element={<OccupationalHealth />} />
-              <Route path="programas" element={<Programs />} />
-              <Route path="financeiro" element={<Financial />} />
+            <Route path="/login" element={<Login />} />
+            <Route element={<ProtectedRoute />}>
+              <Route path="/" element={<ProtectedApp />}>
+                <Route index element={<Dashboard />} />
+                <Route path="empresas" element={<Companies />} />
+                <Route path="setores" element={<Sectors />} />
+                <Route path="colaboradores" element={<Employees />} />
+                <Route path="colaboradores/:id" element={<EmployeeProfile />} />
+                <Route path="epis" element={<PPEs />} />
+                <Route path="entregas" element={<PPEDeliveries />} />
+                <Route path="entregas/:id" element={<PPEDeliveryDetail />} />
+                <Route path="saude" element={<OccupationalHealth />} />
+                <Route path="programas" element={<Programs />} />
+                <Route path="financeiro" element={<Financial />} />
+              </Route>
             </Route>
           </Routes>
         </Suspense>
       </Router>
-    </AppProvider>
+    </AuthProvider>
   );
 }

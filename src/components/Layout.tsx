@@ -10,6 +10,7 @@ import {
   FileSignature,
   HardHat,
   LayoutDashboard,
+  LogOut,
   Menu,
   ShieldCheck,
   Sparkles,
@@ -19,6 +20,7 @@ import {
   X,
 } from "lucide-react";
 import { cn } from "../lib/utils";
+import { useAuth } from "../store/AuthContext";
 
 type NavItem = {
   name: string;
@@ -123,6 +125,7 @@ function getRouteContext(pathname: string) {
 export default function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const location = useLocation();
+  const { logout, user } = useAuth();
   const routeContext = useMemo(
     () => getRouteContext(location.pathname),
     [location.pathname],
@@ -134,6 +137,29 @@ export default function Layout() {
       }).format(new Date()),
     [],
   );
+  const userInitials = useMemo(() => {
+    if (!user?.name) {
+      return "SS";
+    }
+
+    return user.name
+      .split(" ")
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part[0]?.toUpperCase() ?? "")
+      .join("");
+  }, [user?.name]);
+
+  const userRoleLabel = useMemo(() => {
+    const roleMap = {
+      admin: "Administrador",
+      manager: "Gestor",
+      technician: "Tecnico",
+      viewer: "Consulta",
+    } as const;
+
+    return user?.role ? roleMap[user.role] : "Sessão ativa";
+  }, [user?.role]);
 
   useEffect(() => {
     setSidebarOpen(false);
@@ -270,13 +296,23 @@ export default function Layout() {
 
               <div className="header-user-card">
                 <div className="header-user-avatar bg-linear-to-br from-teal-600 to-sky-600">
-                  AD
+                  {userInitials}
                 </div>
                 <div className="hidden sm:block">
-                  <p className="header-user-name">Admin</p>
-                  <p className="header-user-role">Gestor SST</p>
+                  <p className="header-user-name">{user?.name ?? "Operador"}</p>
+                  <p className="header-user-role">{userRoleLabel}</p>
                 </div>
               </div>
+
+              <button
+                className="app-icon-button"
+                type="button"
+                aria-label="Sair"
+                onClick={logout}
+                title="Encerrar sessão"
+              >
+                <LogOut className="h-5 w-5" />
+              </button>
             </div>
           </header>
 

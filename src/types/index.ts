@@ -110,3 +110,17 @@ export interface MedicalReferral {
   reason: string;
   status: "pending" | "completed";
 }
+
+export type UserRole = "admin" | "manager" | "technician" | "viewer";
+
+export interface AuthUser {
+  id: string;
+  username: string;
+  name: string;
+  role: UserRole;
+}
+
+export interface AuthSession {
+  token: string;
+  user: AuthUser;
+}
