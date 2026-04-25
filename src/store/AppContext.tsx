@@ -421,6 +421,11 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
         return prev;
       }
 
+      if (!delivery.employeeFacePhoto?.trim()) {
+        console.warn("PPEDelivery requires an employee face photo");
+        return prev;
+      }
+
       // Decrease PPE stock
       const updatedPPEs = prev.ppes.map((p) => {
         if (p.id === delivery.ppeId) {
@@ -436,6 +441,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
           {
             ...delivery,
             signedAt: delivery.signedAt ?? new Date().toISOString(),
+            facePhotoCapturedAt:
+              delivery.facePhotoCapturedAt ?? new Date().toISOString(),
             id: generateId(),
           },
         ],

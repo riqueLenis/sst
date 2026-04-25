@@ -50,6 +50,8 @@ export interface PPEDelivery {
   status: "delivered" | "returned" | "lost";
   employeeSignature?: string;
   signedAt?: string;
+  employeeFacePhoto?: string;
+  facePhotoCapturedAt?: string;
 }
 
 export interface Transaction {

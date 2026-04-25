@@ -4,6 +4,7 @@ import {
   ArrowLeft,
   Building2,
   CalendarDays,
+  Camera,
   Download,
   HardHat,
   PenLine,
@@ -81,8 +82,8 @@ export default function PPEDeliveryDetail() {
           <h1 className="hero-title">Assinatura e conferência da entrega de EPI</h1>
           <p className="hero-description">
             Registro completo da entrega realizada para {employee.name}, com
-            visualização da assinatura digital capturada, dados do equipamento e
-            informações operacionais do comprovante.
+            visualização da assinatura digital, captura facial vinculada, dados
+            do equipamento e informações operacionais do comprovante.
           </p>
 
           <div className="hero-actions">
@@ -132,6 +133,20 @@ export default function PPEDeliveryDetail() {
 
             <div className="hero-stat">
               <div>
+                <p className="hero-stat-label">Foto facial</p>
+                <p className="hero-stat-value text-2xl">
+                  {delivery.employeeFacePhoto ? "Capturada" : "Não disponível"}
+                </p>
+              </div>
+              <p className="hero-stat-copy">
+                {delivery.facePhotoCapturedAt
+                  ? `Capturada em ${formatPPEDeliverySignedAt(delivery.facePhotoCapturedAt)}.`
+                  : "Registro legado sem foto facial vinculada."}
+              </p>
+            </div>
+
+            <div className="hero-stat">
+              <div>
                 <p className="hero-stat-label">Assinatura</p>
                 <p className="hero-stat-value text-2xl">
                   {delivery.employeeSignature ? "Digital" : "Não disponível"}
@@ -159,45 +174,79 @@ export default function PPEDeliveryDetail() {
         <div className="panel">
           <div className="panel-heading">
             <div>
-              <p className="eyebrow">Dados da entrega</p>
-              <h2 className="panel-title">Informações operacionais</h2>
+              <p className="eyebrow">Evidências biométricas</p>
+              <h2 className="panel-title">Foto facial e assinatura digital</h2>
               <p className="panel-copy">
-                Dados principais do colaborador, empresa e equipamento vinculados
-                a este comprovante.
+                Evidências visuais capturadas no ato da entrega para reforçar a
+                conferência do aceite do colaborador, com foco em uso mobile.
               </p>
             </div>
           </div>
 
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="rounded-2xl border border-slate-200/70 bg-slate-50/80 p-4">
-              <div className="mb-3 flex items-center gap-3 text-slate-900">
-                <div className="rounded-xl bg-blue-100 p-2 text-blue-700">
-                  <User className="h-4 w-4" />
+          <div className="grid gap-4 lg:grid-cols-2">
+            {delivery.employeeFacePhoto ? (
+              <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
+                <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-700">
+                  <Camera className="h-4 w-4 text-blue-600" />
+                  Foto facial de {employee.name}
                 </div>
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
-                    Colaborador
-                  </p>
-                  <p className="text-sm font-semibold text-slate-900">
-                    {employee.name}
-                  </p>
+                <div className="overflow-hidden rounded-2xl border border-slate-200 bg-slate-950">
+                  <img
+                    src={delivery.employeeFacePhoto}
+                    alt={`Foto facial de ${employee.name}`}
+                    className="h-80 w-full object-cover"
+                  />
                 </div>
-              </div>
 
-              <div className="space-y-2 text-sm text-slate-600">
-                <p><span className="font-semibold text-slate-800">CPF:</span> {employee.cpf}</p>
-                <p>
-                  <span className="font-semibold text-slate-800">Admissão:</span>{" "}
-                  {new Date(employee.admissionDate).toLocaleDateString("pt-BR")}
-                </p>
-                <Link
-                  to={`/colaboradores/${employee.id}`}
-                  className="inline-flex items-center text-sm font-semibold text-blue-700 hover:text-blue-800"
-                >
-                  Ver perfil do colaborador
-                </Link>
+                <div className="mt-4 rounded-2xl border border-emerald-100 bg-emerald-50/80 p-4 text-sm text-emerald-800">
+                  <p className="font-semibold">Foto facial validada no registro</p>
+                  <p className="mt-1">
+                    Captura realizada em {formatPPEDeliverySignedAt(delivery.facePhotoCapturedAt ?? delivery.deliveryDate)}.
+                  </p>
+                </div>
               </div>
-            </div>
+            ) : (
+              <div className="rounded-3xl border border-amber-100 bg-amber-50/80 p-5 text-sm text-amber-800">
+                <p className="font-semibold">Foto facial não disponível</p>
+                <p className="mt-1">
+                  Este registro é anterior à obrigatoriedade da captura facial ou
+                  não possui imagem vinculada.
+                </p>
+              </div>
+            )}
+
+            {delivery.employeeSignature ? (
+              <div className="space-y-4">
+                <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
+                  <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-700">
+                    <PenLine className="h-4 w-4 text-blue-600" />
+                    Assinatura de {employee.name}
+                  </div>
+                  <div className="flex min-h-52 items-center justify-center rounded-2xl border border-slate-200 bg-[linear-gradient(180deg,rgba(248,250,252,0.96),rgba(255,255,255,0.98))] p-3">
+                    <img
+                      src={delivery.employeeSignature}
+                      alt={`Assinatura digital de ${employee.name}`}
+                      className="max-h-44 w-full object-contain"
+                    />
+                  </div>
+                </div>
+
+                <div className="rounded-3xl border border-emerald-100 bg-emerald-50/80 p-4 text-sm text-emerald-800">
+                  <p className="font-semibold">Assinatura digital validada no registro</p>
+                  <p className="mt-1">
+                    Captura realizada em {formatPPEDeliverySignedAt(delivery.signedAt ?? delivery.deliveryDate)}.
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="rounded-3xl border border-amber-100 bg-amber-50/80 p-5 text-sm text-amber-800">
+                <p className="font-semibold">Assinatura não disponível</p>
+                <p className="mt-1">
+                  Este registro é anterior à obrigatoriedade de assinatura digital
+                  ou não possui imagem vinculada.
+                </p>
+              </div>
+            )}
 
             <div className="rounded-2xl border border-slate-200/70 bg-slate-50/80 p-4">
               <div className="mb-3 flex items-center gap-3 text-slate-900">

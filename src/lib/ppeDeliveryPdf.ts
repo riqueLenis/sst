@@ -14,6 +14,9 @@ type GeneratePPEDeliveryPdfParams = {
   company: Company;
 };
 
+const getDataUrlFormat = (value: string) =>
+  value.startsWith("data:image/png") ? "PNG" : "JPEG";
+
 export const generatePPEDeliveryPdf = async ({
   delivery,
   employee,
@@ -69,10 +72,57 @@ export const generatePPEDeliveryPdf = async ({
   const splitText = doc.splitTextToSize(declarationText, 180);
   doc.text(splitText, 14, finalY + 20);
 
-  const signatureTop = finalY + 44;
+  const pageHeight = doc.internal.pageSize.getHeight();
+  let currentY = finalY + 44;
   doc.setDrawColor(203, 213, 225);
 
+  const ensureSpace = (requiredHeight: number) => {
+    if (currentY + requiredHeight <= pageHeight - 18) {
+      return;
+    }
+
+    doc.addPage();
+    currentY = 24;
+  };
+
+  if (delivery.employeeFacePhoto) {
+    ensureSpace(92);
+    doc.setFontSize(10);
+    doc.setTextColor(15, 23, 42);
+    doc.text("Foto facial do colaborador", 105, currentY, {
+      align: "center",
+    });
+
+    doc.setFillColor(248, 250, 252);
+    doc.rect(62, currentY + 6, 86, 68, "F");
+    doc.addImage(
+      delivery.employeeFacePhoto,
+      getDataUrlFormat(delivery.employeeFacePhoto),
+      76,
+      currentY + 10,
+      58,
+      58,
+      undefined,
+      "FAST",
+    );
+
+    if (delivery.facePhotoCapturedAt) {
+      doc.setFontSize(9);
+      doc.setTextColor(100, 116, 139);
+      doc.text(
+        `Capturada em ${formatPPEDeliverySignedAt(delivery.facePhotoCapturedAt)}`,
+        105,
+        currentY + 82,
+        { align: "center" },
+      );
+    }
+
+    currentY += 94;
+  }
+
   if (delivery.employeeSignature) {
+    ensureSpace(54);
+    const signatureTop = currentY;
     doc.setFillColor(248, 250, 252);
     doc.rect(34, signatureTop - 16, 142, 34, "F");
     doc.addImage(
@@ -102,9 +152,10 @@ export const generatePPEDeliveryPdf = async ({
       );
     }
   } else {
-    doc.line(40, finalY + 70, 170, finalY + 70);
+    ensureSpace(28);
+    doc.line(40, currentY + 12, 170, currentY + 12);
     doc.setTextColor(15, 23, 42);
-    doc.text(`Assinatura do Colaborador: ${employee.name}`, 105, finalY + 78, {
+    doc.text(`Assinatura do Colaborador: ${employee.name}`, 105, currentY + 20, {
       align: "center",
     });
   }
