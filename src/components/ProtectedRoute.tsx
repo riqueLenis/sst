@@ -1,10 +1,19 @@
 import { ShieldCheck } from "lucide-react";
 import { Navigate, Outlet, useLocation } from "react-router-dom";
+import type { UserRole } from "../types";
 import { useAuth } from "../store/AuthContext";
 
-export default function ProtectedRoute() {
+type ProtectedRouteProps = {
+  allowedRoles?: UserRole[];
+  redirectTo?: string;
+};
+
+export default function ProtectedRoute({
+  allowedRoles,
+  redirectTo = "/",
+}: ProtectedRouteProps) {
   const location = useLocation();
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, user } = useAuth();
 
   if (isLoading) {
     return (
@@ -27,6 +36,10 @@ export default function ProtectedRoute() {
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace state={{ from: location }} />;
+  }
+
+  if (allowedRoles && user && !allowedRoles.includes(user.role)) {
+    return <Navigate to={redirectTo} replace />;
   }
 
   return <Outlet />;

@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { useAppContext } from "../store/AppContext";
 import {
+  formatPPEDeliveryReason,
   formatPPEDeliverySignedAt,
   generatePPEDeliveryPdf,
 } from "../lib/ppeDeliveryPdf";
@@ -172,7 +173,7 @@ export default function PPEDeliveryDetail() {
                 <p className="hero-stat-value text-2xl">{delivery.quantity}</p>
               </div>
               <p className="hero-stat-copy">
-                Motivo informado: {delivery.reason}.
+                Motivo informado: {formatPPEDeliveryReason(delivery)}.
               </p>
             </div>
           </div>

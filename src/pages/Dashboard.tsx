@@ -26,6 +26,7 @@ import {
 import { useAppContext } from "../store/AppContext";
 
 export default function Dashboard() {
+  const [chartsReady, setChartsReady] = React.useState(false);
   const {
     companies,
     employees,
@@ -35,6 +36,16 @@ export default function Dashboard() {
     documents,
     asos,
   } = useAppContext();
+
+  React.useEffect(() => {
+    const animationFrame = window.requestAnimationFrame(() => {
+      setChartsReady(true);
+    });
+
+    return () => {
+      window.cancelAnimationFrame(animationFrame);
+    };
+  }, []);
 
   const activeEmployees = employees.filter(
     (employee) => employee.status === "active",
@@ -251,44 +262,51 @@ export default function Dashboard() {
             </div>
           </div>
 
-          <div className="h-80">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart
-                data={employeesByCompany}
-                margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
-              >
-                <CartesianGrid
-                  strokeDasharray="3 3"
-                  vertical={false}
-                  stroke="#dbe4ee"
-                />
-                <XAxis
-                  dataKey="name"
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fill: "#64748b", fontSize: 12 }}
-                />
-                <YAxis
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fill: "#64748b", fontSize: 12 }}
-                />
-                <Tooltip
-                  cursor={{ fill: "#f1f5f9" }}
-                  contentStyle={{
-                    borderRadius: "16px",
-                    border: "1px solid rgba(226, 232, 240, 0.85)",
-                    boxShadow: "0 20px 40px -30px rgba(15, 23, 42, 0.35)",
-                  }}
-                />
-                <Bar
-                  dataKey="Colaboradores"
-                  fill="#0f766e"
-                  radius={[10, 10, 0, 0]}
-                  barSize={34}
-                />
-              </BarChart>
-            </ResponsiveContainer>
+          <div className="h-80 min-w-0">
+            {chartsReady ? (
+              <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+                <BarChart
+                  data={employeesByCompany}
+                  margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+                >
+                  <CartesianGrid
+                    strokeDasharray="3 3"
+                    vertical={false}
+                    stroke="#dbe4ee"
+                  />
+                  <XAxis
+                    dataKey="name"
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fill: "#64748b", fontSize: 12 }}
+                  />
+                  <YAxis
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fill: "#64748b", fontSize: 12 }}
+                  />
+                  <Tooltip
+                    cursor={{ fill: "#f1f5f9" }}
+                    contentStyle={{
+                      borderRadius: "16px",
+                      border: "1px solid rgba(226, 232, 240, 0.85)",
+                      boxShadow: "0 20px 40px -30px rgba(15, 23, 42, 0.35)",
+                    }}
+                  />
+                  <Bar
+                    dataKey="Colaboradores"
+                    fill="#0f766e"
+                    radius={[10, 10, 0, 0]}
+                    barSize={34}
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div
+                className="h-full w-full rounded-[1.35rem] bg-slate-100/80"
+                aria-hidden="true"
+              />
+            )}
           </div>
         </div>
 
@@ -303,35 +321,42 @@ export default function Dashboard() {
             </div>
           </div>
 
-          <div className="h-80">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={ppeStockData}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={58}
-                  outerRadius={98}
-                  paddingAngle={4}
-                  dataKey="value"
-                >
-                  {ppeStockData.map((entry, index) => (
-                    <Cell
-                      key={`${entry.name}-${index}`}
-                      fill={stockColors[index % stockColors.length]}
-                    />
-                  ))}
-                </Pie>
-                <Tooltip
-                  contentStyle={{
-                    borderRadius: "16px",
-                    border: "1px solid rgba(226, 232, 240, 0.85)",
-                    boxShadow: "0 20px 40px -30px rgba(15, 23, 42, 0.35)",
-                  }}
-                />
-                <Legend verticalAlign="bottom" iconType="circle" />
-              </PieChart>
-            </ResponsiveContainer>
+          <div className="h-80 min-w-0">
+            {chartsReady ? (
+              <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+                <PieChart>
+                  <Pie
+                    data={ppeStockData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={58}
+                    outerRadius={98}
+                    paddingAngle={4}
+                    dataKey="value"
+                  >
+                    {ppeStockData.map((entry, index) => (
+                      <Cell
+                        key={`${entry.name}-${index}`}
+                        fill={stockColors[index % stockColors.length]}
+                      />
+                    ))}
+                  </Pie>
+                  <Tooltip
+                    contentStyle={{
+                      borderRadius: "16px",
+                      border: "1px solid rgba(226, 232, 240, 0.85)",
+                      boxShadow: "0 20px 40px -30px rgba(15, 23, 42, 0.35)",
+                    }}
+                  />
+                  <Legend verticalAlign="bottom" iconType="circle" />
+                </PieChart>
+              </ResponsiveContainer>
+            ) : (
+              <div
+                className="h-full w-full rounded-[1.35rem] bg-slate-100/80"
+                aria-hidden="true"
+              />
+            )}
           </div>
         </div>
       </section>

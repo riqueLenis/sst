@@ -19,6 +19,7 @@ import {
   ASO,
   Absence,
   MedicalReferral,
+  UserRole,
 } from "../types";
 import { ApiError, apiClient, getApiErrorMessage } from "../lib/apiClient";
 import { useAuth } from "./AuthContext";
@@ -119,15 +120,28 @@ const resourceEntries = Object.entries(resourcePaths) as Array<
   [ResourceKey, string]
 >;
 
+const accessibleResourcesByRole: Record<UserRole, ResourceKey[]> = {
+  admin: Object.keys(resourcePaths) as ResourceKey[],
+  manager: Object.keys(resourcePaths) as ResourceKey[],
+  technician: ["companies", "roles", "employees", "ppes", "ppeDeliveries"],
+};
+
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: ReactNode }> = ({
   children,
 }) => {
-  const { logout, token } = useAuth();
+  const { logout, token, user } = useAuth();
   const [state, setState] = useState<AppState>(initialState);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const accessibleResourceEntries = useMemo(() => {
+    const allowedKeys = user?.role
+      ? accessibleResourcesByRole[user.role]
+      : (Object.keys(resourcePaths) as ResourceKey[]);
+
+    return resourceEntries.filter(([key]) => allowedKeys.includes(key));
+  }, [user?.role]);
 
   const handleUnauthorized = useCallback(
     (currentError: unknown) => {
@@ -154,7 +168,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
 
     try {
       const entries = await Promise.all(
-        resourceEntries.map(async ([key, path]) => {
+        accessibleResourceEntries.map(async ([key, path]) => {
           const data = await apiClient.get<AppState[typeof key]>(path, {
             token,
           });
@@ -181,7 +195,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
     } finally {
       setIsLoading(false);
     }
-  }, [handleUnauthorized, token]);
+  }, [accessibleResourceEntries, handleUnauthorized, token]);
 
   useEffect(() => {
     void refreshData();

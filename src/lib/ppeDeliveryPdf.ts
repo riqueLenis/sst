@@ -7,6 +7,22 @@ export const formatPPEDeliverySignedAt = (value: string) =>
     timeStyle: "short",
   });
 
+export const buildPPEDeliveryDeclarationText = (companyName: string) =>
+  `Declaro ter recebido da empresa ${companyName} os Equipamentos de Proteção Individual (EPI) constantes nesta ficha, comprometendo-me a usá-los apenas para a finalidade a que se destinam, responsabilizando-me por sua guarda e conservação, e a comunicar qualquer alteração que os torne impróprios para uso.`;
+
+export const formatPPEDeliveryReason = (
+  delivery: Pick<PPEDelivery, "reason" | "replacementReason">,
+) => {
+  if (
+    delivery.reason === "Substituição" &&
+    delivery.replacementReason?.trim()
+  ) {
+    return `Substituição - ${delivery.replacementReason.trim()}`;
+  }
+
+  return delivery.reason;
+};
+
 type GeneratePPEDeliveryPdfParams = {
   delivery: PPEDelivery;
   employee: Employee;
@@ -51,7 +67,7 @@ export const generatePPEDeliveryPdf = async ({
         ppe.ca,
         delivery.quantity.toString(),
         new Date(delivery.deliveryDate).toLocaleDateString("pt-BR"),
-        delivery.reason,
+        formatPPEDeliveryReason(delivery),
       ],
     ],
     theme: "grid",
@@ -68,7 +84,7 @@ export const generatePPEDeliveryPdf = async ({
     120;
   doc.setFontSize(10);
   doc.setTextColor(71, 85, 105);
-  const declarationText = `Declaro ter recebido da empresa ${company.name} os Equipamentos de Proteção Individual (EPI) constantes nesta ficha, comprometendo-me a usá-los apenas para a finalidade a que se destinam, responsabilizando-me por sua guarda e conservação, e a comunicar qualquer alteração que os torne impróprios para uso.`;
+  const declarationText = buildPPEDeliveryDeclarationText(company.name);
 
   const splitText = doc.splitTextToSize(declarationText, 180);
   doc.text(splitText, 14, finalY + 20);

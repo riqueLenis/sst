@@ -1169,6 +1169,10 @@ thead th {
     width: 100%;
   }
 
+  .mobile-list {
+    display: grid;
+  }
+
   .toolbar-actions > * {
     flex: 1 1 calc(50% - 0.5rem);
     min-width: 0;
@@ -1340,7 +1344,4 @@ thead th {
     grid-column: span 2 / span 2;
   }
 
-  .mobile-list {
-    display: grid;
-  }
 }

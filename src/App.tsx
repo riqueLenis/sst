@@ -1,9 +1,10 @@
 import React, { Suspense, lazy } from "react";
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { BrowserRouter as Router, Navigate, Route, Routes } from "react-router-dom";
 import { ShieldCheck } from "lucide-react";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { AuthProvider } from "./store/AuthContext";
 import { AppProvider } from "./store/AppContext";
+import { useAuth } from "./store/AuthContext";
 const Layout = lazy(() => import("./components/Layout"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const Companies = lazy(() => import("./pages/Companies"));
@@ -69,6 +70,16 @@ function AppFallback() {
   );
 }
 
+function AppHome() {
+  const { user } = useAuth();
+
+  if (user?.role === "technician") {
+    return <Navigate to="/epis" replace />;
+  }
+
+  return <Dashboard />;
+}
+
 export default function App() {
   const ProtectedApp = () => (
     <AppProvider>
@@ -84,17 +95,29 @@ export default function App() {
             <Route path="/login" element={<Login />} />
             <Route element={<ProtectedRoute />}>
               <Route path="/" element={<ProtectedApp />}>
-                <Route index element={<Dashboard />} />
-                <Route path="empresas" element={<Companies />} />
-                <Route path="setores" element={<Sectors />} />
-                <Route path="colaboradores" element={<Employees />} />
-                <Route path="colaboradores/:id" element={<EmployeeProfile />} />
+                <Route index element={<AppHome />} />
                 <Route path="epis" element={<PPEs />} />
                 <Route path="entregas" element={<PPEDeliveries />} />
                 <Route path="entregas/:id" element={<PPEDeliveryDetail />} />
-                <Route path="saude" element={<OccupationalHealth />} />
-                <Route path="programas" element={<Programs />} />
-                <Route path="financeiro" element={<Financial />} />
+                <Route
+                  element={
+                    <ProtectedRoute
+                      allowedRoles={["admin", "manager"]}
+                      redirectTo="/epis"
+                    />
+                  }
+                >
+                  <Route path="empresas" element={<Companies />} />
+                  <Route path="setores" element={<Sectors />} />
+                  <Route path="colaboradores" element={<Employees />} />
+                  <Route
+                    path="colaboradores/:id"
+                    element={<EmployeeProfile />}
+                  />
+                  <Route path="saude" element={<OccupationalHealth />} />
+                  <Route path="programas" element={<Programs />} />
+                  <Route path="financeiro" element={<Financial />} />
+                </Route>
               </Route>
             </Route>
           </Routes>

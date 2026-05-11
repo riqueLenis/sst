@@ -57,10 +57,10 @@ const navItems: NavItem[] = [
     description: "Gestão de vínculos e histórico.",
   },
   {
-    name: "EPIs",
+    name: "Estoque de EPIs",
     path: "/epis",
     icon: HardHat,
-    description: "Catálogo, CA e estoque.",
+    description: "Catálogo, vínculos por cargo e estoque.",
   },
   {
     name: "Entregas de EPI",
@@ -87,8 +87,6 @@ const navItems: NavItem[] = [
     description: "Receitas, despesas e faturamento.",
   },
 ];
-
-const mobileNavItems = [navItems[0], navItems[1], navItems[3], navItems[4]];
 
 function getRouteContext(pathname: string) {
   if (pathname.startsWith("/colaboradores/")) {
@@ -129,6 +127,25 @@ export default function Layout() {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const location = useLocation();
   const { logout, token, user } = useAuth();
+  const isTechnician = user?.role === "technician";
+  const visibleNavItems = useMemo(() => {
+    if (!isTechnician) {
+      return navItems;
+    }
+
+    return navItems.filter(
+      (item) => item.path === "/epis" || item.path === "/entregas",
+    );
+  }, [isTechnician]);
+  const visibleMobileNavItems = useMemo(() => {
+    if (isTechnician) {
+      return visibleNavItems;
+    }
+
+    return navItems.filter((item) =>
+      ["/", "/empresas", "/colaboradores", "/epis"].includes(item.path),
+    );
+  }, [isTechnician, visibleNavItems]);
   const routeContext = useMemo(
     () => getRouteContext(location.pathname),
     [location.pathname],
@@ -157,8 +174,7 @@ export default function Layout() {
     const roleMap = {
       admin: "Administrador",
       manager: "Gestor",
-      technician: "Tecnico",
-      viewer: "Consulta",
+      technician: "Técnico",
     } as const;
 
     return user?.role ? roleMap[user.role] : "Sessão ativa";
@@ -244,7 +260,7 @@ export default function Layout() {
           </div>
 
           <nav className="app-nav">
-            {navItems.map((item) => (
+            {visibleNavItems.map((item) => (
               <NavLink
                 key={item.name}
                 to={item.path}
@@ -387,7 +403,7 @@ export default function Layout() {
         </div>
 
         <nav className="mobile-nav lg:hidden" aria-label="Navegação rápida">
-          {mobileNavItems.map((item) => (
+          {visibleMobileNavItems.map((item) => (
             <NavLink
               key={item.path}
               to={item.path}

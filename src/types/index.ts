@@ -17,6 +17,7 @@ export interface Role {
   name: string;
   sectorId: string;
   description: string;
+  requiredPpeIds?: string[];
 }
 
 export interface Employee {
@@ -37,6 +38,9 @@ export interface PPE {
   ca: string;
   description: string;
   stockQuantity: number;
+  unitCost?: number;
+  minimumStock?: number;
+  usefulLifeDays?: number;
 }
 
 export interface PPEDelivery {
@@ -47,6 +51,7 @@ export interface PPEDelivery {
   deliveryDate: string;
   returnDate?: string;
   reason: string;
+  replacementReason?: string;
   status: "delivered" | "returned" | "lost";
   employeeSignature?: string;
   signedAt?: string;
@@ -111,7 +116,7 @@ export interface MedicalReferral {
   status: "pending" | "completed";
 }
 
-export type UserRole = "admin" | "manager" | "technician" | "viewer";
+export type UserRole = "admin" | "manager" | "technician";
 
 export interface AuthUser {
   id: string;

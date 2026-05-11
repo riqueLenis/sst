@@ -5,16 +5,27 @@ import {
   Pencil,
   Trash2,
   Briefcase,
+  HardHat,
   Layers,
   X,
   Download,
 } from "lucide-react";
 import { exportTableToPDF } from "../lib/pdfUtils";
 
+type ActiveTab = "sectors" | "roles" | "requirements";
+
+type RoleFormState = {
+  name: string;
+  sectorId: string;
+  description: string;
+  requiredPpeIds: string[];
+};
+
 export default function Sectors() {
   const {
     sectors,
     roles,
+    ppes,
     addSector,
     updateSector,
     deleteSector,
@@ -23,7 +34,7 @@ export default function Sectors() {
     deleteRole,
   } = useAppContext();
 
-  const [activeTab, setActiveTab] = useState<"sectors" | "roles">("sectors");
+  const [activeTab, setActiveTab] = useState<ActiveTab>("sectors");
 
   // Sector Modal State
   const [isSectorModalOpen, setIsSectorModalOpen] = useState(false);
@@ -36,11 +47,43 @@ export default function Sectors() {
   // Role Modal State
   const [isRoleModalOpen, setIsRoleModalOpen] = useState(false);
   const [editingRoleId, setEditingRoleId] = useState<string | null>(null);
-  const [roleFormData, setRoleFormData] = useState({
+  const [roleFormData, setRoleFormData] = useState<RoleFormState>({
     name: "",
     sectorId: "",
     description: "",
+    requiredPpeIds: [],
   });
+
+  const toggleRequiredPpe = (ppeId: string) => {
+    setRoleFormData((prev) => ({
+      ...prev,
+      requiredPpeIds: prev.requiredPpeIds.includes(ppeId)
+        ? prev.requiredPpeIds.filter((currentId) => currentId !== ppeId)
+        : [...prev.requiredPpeIds, ppeId],
+    }));
+  };
+
+  const openRoleModal = (role?: (typeof roles)[number]) => {
+    if (role) {
+      setRoleFormData({
+        name: role.name,
+        sectorId: role.sectorId,
+        description: role.description,
+        requiredPpeIds: role.requiredPpeIds ?? [],
+      });
+      setEditingRoleId(role.id);
+    } else {
+      setEditingRoleId(null);
+      setRoleFormData({
+        name: "",
+        sectorId: sectors[0]?.id || "",
+        description: "",
+        requiredPpeIds: [],
+      });
+    }
+
+    setIsRoleModalOpen(true);
+  };
 
   const handleSectorSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -62,7 +105,12 @@ export default function Sectors() {
       addRole(roleFormData);
     }
     setIsRoleModalOpen(false);
-    setRoleFormData({ name: "", sectorId: "", description: "" });
+    setRoleFormData({
+      name: "",
+      sectorId: "",
+      description: "",
+      requiredPpeIds: [],
+    });
     setEditingRoleId(null);
   };
 
@@ -76,13 +124,34 @@ export default function Sectors() {
         data,
         "setores_sst_pro",
       );
-    } else {
+    } else if (activeTab === "roles") {
       const columns = ["Nome do Cargo", "Setor", "Descrição"];
       const data = roles.map((r) => {
         const sector = sectors.find((s) => s.id === r.sectorId);
         return [r.name, sector?.name || "N/A", r.description];
       });
       exportTableToPDF("Relatório de Cargos", columns, data, "cargos_sst_pro");
+    } else {
+      const columns = ["Cargo", "Setor", "EPIs obrigatórios"];
+      const data = roles.map((role) => {
+        const sector = sectors.find((item) => item.id === role.sectorId);
+        const linkedPpes = (role.requiredPpeIds ?? [])
+          .map((ppeId) => ppes.find((ppe) => ppe.id === ppeId)?.name)
+          .filter(Boolean)
+          .join(", ");
+
+        return [
+          role.name,
+          sector?.name || "N/A",
+          linkedPpes || "Nenhum EPI obrigatório vinculado",
+        ];
+      });
+      exportTableToPDF(
+        "Relatório de EPIs obrigatórios por cargo",
+        columns,
+        data,
+        "epis_obrigatorios_por_cargo",
+      );
     }
   };
 
@@ -125,15 +194,7 @@ export default function Sectors() {
             Novo Setor
           </button>
           <button
-            onClick={() => {
-              setEditingRoleId(null);
-              setRoleFormData({
-                name: "",
-                sectorId: sectors[0]?.id || "",
-                description: "",
-              });
-              setIsRoleModalOpen(true);
-            }}
+            onClick={() => openRoleModal()}
             className="inline-flex items-center justify-center rounded-xl text-sm font-semibold transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:pointer-events-none disabled:opacity-50 bg-blue-600 text-white hover:bg-blue-700 shadow-sm shadow-blue-200 h-10 px-4 py-2"
           >
             <Briefcase className="w-4 h-4 mr-2" />
@@ -147,7 +208,7 @@ export default function Sectors() {
           <nav className="flex" aria-label="Tabs">
             <button
               onClick={() => setActiveTab("sectors")}
-              className={`w-1/2 py-4 px-1 text-center border-b-2 font-semibold text-sm transition-colors ${
+              className={`flex-1 py-4 px-1 text-center border-b-2 font-semibold text-sm transition-colors ${
                 activeTab === "sectors"
                   ? "border-blue-600 text-blue-700 bg-white"
                   : "border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300"
@@ -158,7 +219,7 @@ export default function Sectors() {
             </button>
             <button
               onClick={() => setActiveTab("roles")}
-              className={`w-1/2 py-4 px-1 text-center border-b-2 font-semibold text-sm transition-colors ${
+              className={`flex-1 py-4 px-1 text-center border-b-2 font-semibold text-sm transition-colors ${
                 activeTab === "roles"
                   ? "border-blue-600 text-blue-700 bg-white"
                   : "border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300"
@@ -166,6 +227,17 @@ export default function Sectors() {
             >
               <Briefcase className="w-4 h-4 inline-block mr-2 mb-0.5" />
               Cargos
+            </button>
+            <button
+              onClick={() => setActiveTab("requirements")}
+              className={`flex-1 py-4 px-1 text-center border-b-2 font-semibold text-sm transition-colors ${
+                activeTab === "requirements"
+                  ? "border-blue-600 text-blue-700 bg-white"
+                  : "border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300"
+              }`}
+            >
+              <HardHat className="w-4 h-4 inline-block mr-2 mb-0.5" />
+              EPIs obrigatórios
             </button>
           </nav>
         </div>
@@ -278,15 +350,7 @@ export default function Sectors() {
                         <td className="px-6 py-4 text-right">
                           <div className="flex items-center justify-end gap-2">
                             <button
-                              onClick={() => {
-                                setRoleFormData({
-                                  name: role.name,
-                                  sectorId: role.sectorId,
-                                  description: role.description,
-                                });
-                                setEditingRoleId(role.id);
-                                setIsRoleModalOpen(true);
-                              }}
+                              onClick={() => openRoleModal(role)}
                               className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                             >
                               <Pencil className="w-4 h-4" />
@@ -330,6 +394,94 @@ export default function Sectors() {
                   )}
                 </tbody>
               </table>
+            </div>
+          )}
+
+          {activeTab === "requirements" && (
+            <div className="overflow-x-auto animate-in fade-in duration-300">
+              <table className="w-full text-sm text-left text-slate-600">
+                <thead className="text-xs text-slate-500 uppercase bg-slate-50 border-b border-slate-200 font-semibold">
+                  <tr>
+                    <th className="px-6 py-4">Cargo</th>
+                    <th className="px-6 py-4">Setor</th>
+                    <th className="px-6 py-4">EPIs obrigatórios</th>
+                    <th className="px-6 py-4 text-right">Ações</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {roles.map((role) => {
+                    const sector = sectors.find((item) => item.id === role.sectorId);
+                    const linkedPpes = (role.requiredPpeIds ?? []).flatMap((ppeId) => {
+                      const ppe = ppes.find((item) => item.id === ppeId);
+                      return ppe ? [ppe] : [];
+                    });
+
+                    return (
+                      <tr
+                        key={role.id}
+                        className="bg-white hover:bg-slate-50/80 transition-colors"
+                      >
+                        <td className="px-6 py-4 font-semibold text-slate-900">
+                          {role.name}
+                        </td>
+                        <td className="px-6 py-4">
+                          {sector?.name || "Setor não encontrado"}
+                        </td>
+                        <td className="px-6 py-4">
+                          {linkedPpes.length > 0 ? (
+                            <div className="flex flex-wrap gap-2">
+                              {linkedPpes.map((ppe) => (
+                                <span
+                                  key={ppe.id}
+                                  className="inline-flex items-center rounded-full border border-blue-100 bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700"
+                                >
+                                  {ppe.name}
+                                </span>
+                              ))}
+                            </div>
+                          ) : (
+                            <span className="text-slate-400">
+                              Nenhum EPI obrigatório vinculado.
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                          <button
+                            onClick={() => openRoleModal(role)}
+                            className="inline-flex items-center rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-50 hover:text-slate-900"
+                          >
+                            Gerenciar vínculo
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                  {roles.length === 0 && (
+                    <tr>
+                      <td
+                        colSpan={4}
+                        className="px-6 py-12 text-center text-slate-500"
+                      >
+                        <div className="flex flex-col items-center justify-center">
+                          <HardHat className="w-12 h-12 text-slate-300 mb-3" />
+                          <p className="text-base font-medium text-slate-900">
+                            Nenhum cargo disponível para vincular EPIs
+                          </p>
+                          <p className="text-sm">
+                            Cadastre um cargo primeiro e depois defina os EPIs obrigatórios dele.
+                          </p>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+
+              {roles.length > 0 && ppes.length === 0 && (
+                <div className="border-t border-slate-100 bg-amber-50/80 px-6 py-4 text-sm text-amber-800">
+                  Nenhum EPI foi cadastrado ainda no módulo Estoque de EPIs. Cadastre os itens primeiro para vinculá-los aos cargos.
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -478,6 +630,53 @@ export default function Sectors() {
                   className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                   placeholder="Descreva as responsabilidades do cargo..."
                 />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1.5">
+                  EPIs obrigatórios do cargo
+                </label>
+
+                {ppes.length === 0 ? (
+                  <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50/70 px-4 py-3 text-sm text-slate-500">
+                    Cadastre EPIs no módulo Estoque de EPIs para poder vinculá-los a este cargo.
+                  </div>
+                ) : (
+                  <div className="max-h-56 space-y-2 overflow-y-auto rounded-xl border border-slate-200 bg-slate-50/50 p-3">
+                    {ppes.map((ppe) => {
+                      const isChecked = roleFormData.requiredPpeIds.includes(ppe.id);
+
+                      return (
+                        <label
+                          key={ppe.id}
+                          className={`flex cursor-pointer items-start gap-3 rounded-xl border px-3 py-2.5 transition-colors ${
+                            isChecked
+                              ? "border-blue-200 bg-blue-50/80"
+                              : "border-transparent bg-white hover:border-slate-200"
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={() => toggleRequiredPpe(ppe.id)}
+                            className="mt-0.5 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                          />
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-semibold text-slate-900">
+                              {ppe.name}
+                            </p>
+                            <p className="text-xs text-slate-500">
+                              CA {ppe.ca} • Estoque {ppe.stockQuantity} un
+                            </p>
+                          </div>
+                        </label>
+                      );
+                    })}
+                  </div>
+                )}
+
+                <p className="mt-2 text-xs text-slate-500">
+                  {roleFormData.requiredPpeIds.length} EPI(s) obrigatório(s) vinculado(s) a este cargo.
+                </p>
               </div>
               <div className="mt-8 flex flex-col-reverse gap-3 pt-4 border-t border-slate-100 sm:flex-row sm:justify-end">
                 <button

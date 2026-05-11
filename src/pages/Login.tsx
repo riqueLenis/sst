@@ -29,13 +29,7 @@ const demoAccounts = [
     role: "Tecnico",
     username: "tecnico",
     password: "Tecnico@123",
-    description: "Execução operacional de SST, entregas, saúde ocupacional e documentos.",
-  },
-  {
-    role: "Consulta",
-    username: "consulta",
-    password: "Consulta@123",
-    description: "Perfil somente leitura para auditoria e acompanhamento executivo.",
+    description: "Acesso restrito a Estoque e Entregas de EPI, com permissão apenas para cadastrar novos EPIs.",
   },
 ];
 

@@ -61,7 +61,12 @@ O frontend agora consome a API autenticada e nao depende mais do `localStorage` 
 - `admin / Admin@123`
 - `gestor / Gestor@123`
 - `tecnico / Tecnico@123`
-- `consulta / Consulta@123`
+
+### Regras atuais de acesso
+
+- o perfil `tecnico` visualiza apenas `Estoque de EPIs` e `Entregas de EPI`
+- o perfil `tecnico` pode somente cadastrar novos EPIs no estoque
+- entregas, devoluções e demais cadastros ficam sob responsabilidade do `gestor` ou `admin`
 
 ### Observacoes importantes
 
