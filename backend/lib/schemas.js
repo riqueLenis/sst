@@ -19,6 +19,12 @@ const optionalDateString = (label) =>
     .optional()
     .transform((value) => (value ? value : undefined));
 
+const optionalTrimmedString = (label, max = 255) =>
+  z
+    .union([trimmedString(label, max), z.literal("")])
+    .optional()
+    .transform((value) => (value ? value : undefined));
+
 const numericField = (label, schema) =>
   z.preprocess(
     (value) => {
@@ -60,6 +66,14 @@ const positiveNumber = (label) =>
       .positive(`${label} deve ser maior que zero.`),
   );
 
+const nonNegativeNumber = (label) =>
+  numericField(
+    label,
+    z
+      .number({ invalid_type_error: `${label} deve ser numérico.` })
+      .min(0, `${label} não pode ser negativo.`),
+  );
+
 const booleanField = (label) =>
   z.preprocess(
     (value) => {
@@ -95,6 +109,18 @@ const passwordString = trimmedString("Senha", 120).min(
 
 const patchSchema = (schema) => schema.partial().strict();
 
+const addPpeDeliveryReplacementValidation = (schema) =>
+  schema.superRefine((value, context) => {
+    if (value.reason === "Substituição" && !value.replacementReason?.trim()) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["replacementReason"],
+        message:
+          "Motivo da substituição é obrigatório quando o motivo da entrega for Substituição.",
+      });
+    }
+  });
+
 const companySchema = z
   .object({
     name: trimmedString("Nome da empresa", 180),
@@ -116,6 +142,7 @@ const roleSchema = z
     name: trimmedString("Nome do cargo", 120),
     sectorId: trimmedString("Setor", 80),
     description: trimmedString("Descrição", 400),
+    requiredPpeIds: z.array(trimmedString("EPI obrigatório", 80)).default([]),
   })
   .strict();
 
@@ -138,10 +165,13 @@ const ppeSchema = z
     ca: trimmedString("CA", 30),
     description: trimmedString("Descrição", 400),
     stockQuantity: nonNegativeInteger("Quantidade em estoque"),
+    unitCost: nonNegativeNumber("Custo unitário estimado").default(0),
+    minimumStock: nonNegativeInteger("Estoque mínimo").default(5),
+    usefulLifeDays: positiveInteger("Vida útil estimada em dias").default(180),
   })
   .strict();
 
-const ppeDeliverySchema = z
+const ppeDeliveryObjectSchema = z
   .object({
     employeeId: trimmedString("Colaborador", 80),
     ppeId: trimmedString("EPI", 80),
@@ -149,6 +179,7 @@ const ppeDeliverySchema = z
     deliveryDate: dateString("Data da entrega"),
     returnDate: optionalDateString("Data de devolução"),
     reason: trimmedString("Motivo", 240),
+    replacementReason: optionalTrimmedString("Motivo da substituição", 240),
     status: enumField(
       ["delivered", "returned", "lost"],
       "Status da entrega",
@@ -159,6 +190,14 @@ const ppeDeliverySchema = z
     facePhotoCapturedAt: optionalDateString("Data da captura facial"),
   })
   .strict();
+
+const ppeDeliverySchema = addPpeDeliveryReplacementValidation(
+  ppeDeliveryObjectSchema,
+);
+
+const ppeDeliveryPatchSchema = addPpeDeliveryReplacementValidation(
+  ppeDeliveryObjectSchema.partial().strict(),
+);
 
 const transactionSchema = z
   .object({
@@ -251,7 +290,7 @@ export const resourceSchemas = {
   },
   ppeDeliveries: {
     create: ppeDeliverySchema,
-    update: patchSchema(ppeDeliverySchema),
+    update: ppeDeliveryPatchSchema,
   },
   transactions: {
     create: transactionSchema,

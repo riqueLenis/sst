@@ -119,6 +119,20 @@ const resourceTables = {
   referrals: "referrals",
 };
 
+const technicianFieldWhitelist = {
+  companies: ["id", "name", "cnpj"],
+  roles: ["id", "name", "sectorId", "requiredPpeIds"],
+  employees: [
+    "id",
+    "name",
+    "cpf",
+    "admissionDate",
+    "companyId",
+    "roleId",
+    "status",
+  ],
+};
+
 const getDeliveryContribution = (delivery) =>
   delivery.status === "returned" ? 0 : delivery.quantity;
 
@@ -127,6 +141,13 @@ const ensureDateOrder = (start, end, message) => {
     throw new HttpError(400, message);
   }
 };
+
+const pickFields = (entity, fields) =>
+  Object.fromEntries(
+    fields
+      .filter((field) => field in entity)
+      .map((field) => [field, entity[field]]),
+  );
 
 export class MySqlStore {
   static async create() {
@@ -166,36 +187,62 @@ export class MySqlStore {
     }
   }
 
-  async list(resource, filters = {}) {
-    return clone(await this.getRepository(resource).list(filters));
-  }
-
-  async get(resource, id) {
-    return clone(await this.findOrFail(resource, id));
-  }
-
-  async create(resource, payload) {
-    if (resource === "ppeDeliveries") {
-      return clone(await this.createDelivery(payload));
+  sanitizeForUser(resource, value, authUser) {
+    if (!value || !authUser || authUser.role !== "technician") {
+      return value;
     }
 
-    return clone(await this.createEntity(resource, payload));
-  }
+    const allowedFields = technicianFieldWhitelist[resource];
 
-  async update(resource, id, payload) {
-    if (resource === "ppeDeliveries") {
-      return clone(await this.updateDelivery(id, payload));
+    if (!allowedFields) {
+      return value;
     }
 
-    return clone(await this.updateEntity(resource, id, payload));
-  }
-
-  async remove(resource, id) {
-    if (resource === "ppeDeliveries") {
-      return clone(await this.removeDelivery(id));
+    if (Array.isArray(value)) {
+      return value.map((entry) => pickFields(entry, allowedFields));
     }
 
-    return clone(await this.removeEntity(resource, id));
+    return pickFields(value, allowedFields);
+  }
+
+  async list(resource, filters = {}, authUser = null) {
+    const data = await this.getRepository(resource).list(filters);
+    return clone(this.sanitizeForUser(resource, data, authUser));
+  }
+
+  async get(resource, id, authUser = null) {
+    const data = await this.findOrFail(resource, id);
+    return clone(this.sanitizeForUser(resource, data, authUser));
+  }
+
+  async create(resource, payload, authUser = null) {
+    if (resource === "ppeDeliveries") {
+      const data = await this.createDelivery(payload);
+      return clone(this.sanitizeForUser(resource, data, authUser));
+    }
+
+    const data = await this.createEntity(resource, payload);
+    return clone(this.sanitizeForUser(resource, data, authUser));
+  }
+
+  async update(resource, id, payload, authUser = null) {
+    if (resource === "ppeDeliveries") {
+      const data = await this.updateDelivery(id, payload);
+      return clone(this.sanitizeForUser(resource, data, authUser));
+    }
+
+    const data = await this.updateEntity(resource, id, payload);
+    return clone(this.sanitizeForUser(resource, data, authUser));
+  }
+
+  async remove(resource, id, authUser = null) {
+    if (resource === "ppeDeliveries") {
+      const data = await this.removeDelivery(id);
+      return clone(this.sanitizeForUser(resource, data, authUser));
+    }
+
+    const data = await this.removeEntity(resource, id);
+    return clone(this.sanitizeForUser(resource, data, authUser));
   }
 
   getRepository(resource) {
@@ -229,6 +276,9 @@ export class MySqlStore {
     switch (resource) {
       case "roles":
         await this.assertReference("sectors", entity.sectorId, executor);
+        for (const requiredPpeId of entity.requiredPpeIds ?? []) {
+          await this.assertReference("ppes", requiredPpeId, executor);
+        }
         break;
       case "employees":
         await this.assertReference("companies", entity.companyId, executor);
@@ -284,6 +334,17 @@ export class MySqlStore {
   }
 
   async assertCanDelete(resource, id, executor = this.db) {
+    if (resource === "ppes") {
+      const linkedRoles = await this.getRepository("roles").list({}, executor);
+
+      if (linkedRoles.some((role) => role.requiredPpeIds?.includes(id))) {
+        throw new HttpError(
+          409,
+          "O EPI está vinculado como obrigatório a um ou mais cargos e não pode ser removido.",
+        );
+      }
+    }
+
     const constraints = deleteConstraints[resource] ?? [];
 
     for (const constraint of constraints) {
@@ -367,6 +428,17 @@ export class MySqlStore {
 
     if (delivery.status !== "returned") {
       delivery.returnDate = undefined;
+    }
+
+    if (delivery.reason === "Substituição") {
+      if (!delivery.replacementReason?.trim()) {
+        throw new HttpError(
+          400,
+          "Motivo da substituição é obrigatório para entregas com motivo 'Substituição'.",
+        );
+      }
+    } else {
+      delivery.replacementReason = undefined;
     }
 
     if (!current) {

@@ -38,7 +38,11 @@ export const createAuthRouter = (authService) => {
   router.post(
     "/logout",
     authenticate(authService),
-    handle(async (_req, res) => {
+    handle(async (req, res) => {
+      if (req.authToken) {
+        await authService.logout(req.authToken);
+      }
+
       res.json({
         data: null,
         meta: {

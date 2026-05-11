@@ -27,6 +27,7 @@ export const authenticate = (authService) => async (req, _res, next) => {
       throw new HttpError(401, "Token de acesso ausente.");
     }
 
+    req.authToken = token;
     req.authUser = await authService.verifyAccessToken(token);
     next();
   } catch (error) {

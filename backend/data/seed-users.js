@@ -17,10 +17,4 @@ export const defaultUsers = [
     role: "technician",
     password: "Tecnico@123",
   },
-  {
-    username: "consulta",
-    name: "Consulta SST",
-    role: "viewer",
-    password: "Consulta@123",
-  },
 ];

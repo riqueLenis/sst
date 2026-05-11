@@ -88,6 +88,18 @@ export class UserRepository {
     return this.findById(user.id);
   }
 
+  async deleteByRoles(roles) {
+    if (!Array.isArray(roles) || roles.length === 0) {
+      return;
+    }
+
+    const placeholders = roles.map(() => "?").join(", ");
+    await this.db.query(
+      `DELETE FROM users WHERE role IN (${placeholders})`,
+      roles,
+    );
+  }
+
   async seed(users) {
     if ((await this.count()) > 0) {
       return;
