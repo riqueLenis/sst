@@ -7,11 +7,19 @@ const parseNumber = (value, fallback) => {
   return Number.isFinite(parsed) ? parsed : fallback;
 };
 
+const normalizeOrigin = (value) =>
+  value
+    .trim()
+    .replace(/^['\"]|['\"]$/g, "")
+    .replace(/\/$/, "");
+
 const defaultCorsOrigins = [
   "http://localhost:3000",
   "http://127.0.0.1:3000",
+  "https://exingroup.com.br",
+  "https://www.exingroup.com.br",
   "https://api.exingroup.com.br",
-];
+].map(normalizeOrigin);
 
 const parseOrigins = (value) => {
   if (!value) {
@@ -20,7 +28,7 @@ const parseOrigins = (value) => {
 
   return value
     .split(",")
-    .map((item) => item.trim())
+    .map(normalizeOrigin)
     .filter(Boolean);
 };
 

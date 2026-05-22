@@ -13,15 +13,19 @@ import { createAuthRouter } from "./routes/auth.js";
 import { apiResources, createApiRouter } from "./routes/api.js";
 import { AuthService } from "./services/auth-service.js";
 
+const normalizeOrigin = (value) => value.replace(/\/$/, "");
+
 const isAllowedOrigin = (origin) => {
   if (!origin) {
     return true;
   }
 
+  const normalizedOrigin = normalizeOrigin(origin);
+
   return (
     env.corsOrigins.includes("*") ||
-    env.corsOrigins.includes(origin) ||
-    (env.nodeEnv !== "production" && isDevelopmentOrigin(origin))
+    env.corsOrigins.includes(normalizedOrigin) ||
+    (env.nodeEnv !== "production" && isDevelopmentOrigin(normalizedOrigin))
   );
 };
 
