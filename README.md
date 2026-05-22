@@ -72,5 +72,6 @@ O frontend agora consome a API autenticada e nao depende mais do `localStorage` 
 
 - os dados persistem entre reinicializações porque agora ficam no MySQL local
 - o `.env` local já foi configurado com `MYSQL_HOST=localhost`, `MYSQL_USER=root`, `MYSQL_PASSWORD=lenis`, `MYSQL_DATABASE=sst`
-- em produção, troque `JWT_SECRET` e ajuste `CORS_ORIGIN`
-- o frontend usa `/api` por proxy no Vite em desenvolvimento ou `VITE_API_BASE_URL` quando configurado
+- em produção, troque `JWT_SECRET` e ajuste `CORS_ORIGIN` caso o frontend rode em um dominio diferente de `api.exingroup.com.br`
+- sem `VITE_API_BASE_URL`, o frontend usa `http://localhost:4000` quando aberto em localhost e `https://api.exingroup.com.br` fora do ambiente local
+- `VITE_API_PROXY_TARGET` fica apontado para `http://localhost:4000` para manter o fluxo de desenvolvimento local

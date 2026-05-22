@@ -34,11 +34,28 @@ export class ApiError extends Error {
   }
 }
 
+const LOCAL_API_BASE_URL = "http://localhost:4000";
+const PRODUCTION_API_BASE_URL = "https://api.exingroup.com.br";
+
+const isLocalHostname = (hostname: string) =>
+  hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1";
+
+const resolveApiBaseUrl = () => {
+  const configuredBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim();
+
+  if (configuredBaseUrl) {
+    return configuredBaseUrl.replace(/\/$/, "");
+  }
+
+  if (typeof window !== "undefined" && isLocalHostname(window.location.hostname)) {
+    return LOCAL_API_BASE_URL;
+  }
+
+  return PRODUCTION_API_BASE_URL;
+};
+
 const resolveApiPath = (path: string) => {
-  const normalizedBase = (import.meta.env.VITE_API_BASE_URL ?? "").replace(
-    /\/$/,
-    "",
-  );
+  const normalizedBase = resolveApiBaseUrl();
 
   return `${normalizedBase}${path}`;
 };

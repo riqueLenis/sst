@@ -9,6 +9,7 @@ import {
   DollarSign,
   FileSignature,
   HardHat,
+  KeyRound,
   LayoutDashboard,
   LoaderCircle,
   LogOut,
@@ -86,6 +87,12 @@ const navItems: NavItem[] = [
     icon: DollarSign,
     description: "Receitas, despesas e faturamento.",
   },
+  {
+    name: "Acessos",
+    path: "/acessos",
+    icon: KeyRound,
+    description: "Gestão de logins e perfis administrativos.",
+  },
 ];
 
 function getRouteContext(pathname: string) {
@@ -129,14 +136,18 @@ export default function Layout() {
   const { logout, token, user } = useAuth();
   const isTechnician = user?.role === "technician";
   const visibleNavItems = useMemo(() => {
-    if (!isTechnician) {
+    if (user?.role === "admin") {
       return navItems;
+    }
+
+    if (user?.role === "manager") {
+      return navItems.filter((item) => item.path !== "/acessos");
     }
 
     return navItems.filter(
       (item) => item.path === "/epis" || item.path === "/entregas",
     );
-  }, [isTechnician]);
+  }, [user?.role]);
   const visibleMobileNavItems = useMemo(() => {
     if (isTechnician) {
       return visibleNavItems;

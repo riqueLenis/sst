@@ -1,7 +1,6 @@
 import React, { useMemo, useState } from "react";
 import {
   ArrowRight,
-  CheckCircle2,
   Eye,
   EyeOff,
   KeyRound,
@@ -12,25 +11,10 @@ import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import { getApiErrorMessage } from "../lib/apiClient";
 import { useAuth } from "../store/AuthContext";
 
-const demoAccounts = [
-  {
-    role: "Administrador",
-    username: "admin",
-    password: "Admin@123",
-    description: "Acesso completo a cadastros, financeiro e configurações críticas.",
-  },
-  {
-    role: "Gestor",
-    username: "gestor",
-    password: "Gestor@123",
-    description: "Operação ampla com foco gerencial e acompanhamento das rotinas.",
-  },
-  {
-    role: "Tecnico",
-    username: "tecnico",
-    password: "Tecnico@123",
-    description: "Acesso restrito a Estoque e Entregas de EPI, com permissão apenas para cadastrar novos EPIs.",
-  },
+const securityHighlights = [
+  "Credenciais não ficam mais expostas na tela inicial.",
+  "O acesso depende de contas geridas diretamente pelo administrador.",
+  "Cada perfil recebe somente os módulos permitidos para sua função.",
 ];
 
 export default function Login() {
@@ -38,8 +22,8 @@ export default function Login() {
   const location = useLocation();
   const { isAuthenticated, isLoading, login } = useAuth();
   const [credentials, setCredentials] = useState({
-    username: "admin",
-    password: "Admin@123",
+    username: "",
+    password: "",
   });
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -79,34 +63,21 @@ export default function Login() {
               Entre no painel SST com autenticação real e permissões por perfil.
             </h1>
             <p className="hero-description mt-4 max-w-2xl">
-              O frontend agora consome a API autenticada, com sessão validada no backend e dados persistidos em banco local.
+              O frontend consome a API autenticada com sessão validada no backend e permissões aplicadas por usuário cadastrado.
             </p>
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2 lg:gap-4">
-            {demoAccounts.map((account) => (
-              <button
-                key={account.username}
-                type="button"
-                onClick={() =>
-                  setCredentials({
-                    username: account.username,
-                    password: account.password,
-                  })
-                }
-                className="rounded-3xl border border-white/60 bg-white/80 p-4 text-left shadow-lg shadow-slate-200/40 transition-transform duration-200 hover:-translate-y-0.5 sm:p-5"
+            {securityHighlights.map((highlight) => (
+              <div
+                key={highlight}
+                className="rounded-3xl border border-white/60 bg-white/80 p-4 text-left shadow-lg shadow-slate-200/40 sm:p-5"
               >
-                <div className="flex items-center justify-between gap-4">
-                  <div>
-                    <p className="text-sm font-semibold text-slate-900">{account.role}</p>
-                    <p className="mt-1 text-xs font-medium text-slate-500">
-                      {account.username} / {account.password}
-                    </p>
-                  </div>
-                  <CheckCircle2 className="h-5 w-5 text-emerald-600" />
-                </div>
-                <p className="mt-3 text-sm text-slate-600">{account.description}</p>
-              </button>
+                <p className="text-sm font-semibold text-slate-900">
+                  Controle de acesso
+                </p>
+                <p className="mt-3 text-sm text-slate-600">{highlight}</p>
+              </div>
             ))}
           </div>
         </section>

@@ -129,3 +129,9 @@ export interface AuthSession {
   token: string;
   user: AuthUser;
 }
+
+export interface ManagedUser extends AuthUser {
+  isActive: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}

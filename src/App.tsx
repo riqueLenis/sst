@@ -17,6 +17,7 @@ const PPEDeliveryDetail = lazy(() => import("./pages/PPEDeliveryDetail"));
 const Financial = lazy(() => import("./pages/Financial"));
 const Programs = lazy(() => import("./pages/Programs"));
 const OccupationalHealth = lazy(() => import("./pages/OccupationalHealth"));
+const AccessManagement = lazy(() => import("./pages/AccessManagement"));
 const Login = lazy(() => import("./pages/Login"));
 
 function AppFallback() {
@@ -99,6 +100,13 @@ export default function App() {
                 <Route path="epis" element={<PPEs />} />
                 <Route path="entregas" element={<PPEDeliveries />} />
                 <Route path="entregas/:id" element={<PPEDeliveryDetail />} />
+                <Route
+                  element={
+                    <ProtectedRoute allowedRoles={["admin"]} redirectTo="/" />
+                  }
+                >
+                  <Route path="acessos" element={<AccessManagement />} />
+                </Route>
                 <Route
                   element={
                     <ProtectedRoute
