@@ -113,7 +113,8 @@ const seedState = {
       deliveryDate: "2026-03-12",
       returnDate: "2026-04-08",
       reason: "Substituição",
-      replacementReason: "Desgaste do par anterior após uso contínuo no setor produtivo",
+      replacementReason:
+        "Desgaste do par anterior após uso contínuo no setor produtivo",
       status: "returned",
     },
     {

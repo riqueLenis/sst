@@ -106,6 +106,9 @@ const passwordString = trimmedString("Senha", 120).min(
   6,
   "Senha deve ter no mínimo 6 caracteres.",
 );
+const userRoleSchema = z.enum(["admin", "manager", "technician"], {
+  errorMap: () => ({ message: "Perfil de acesso inválido." }),
+});
 
 const patchSchema = (schema) => schema.partial().strict();
 
@@ -319,6 +322,14 @@ export const authSchemas = {
     .object({
       username: trimmedString("Usuário", 80),
       password: passwordString,
+    })
+    .strict(),
+  createUser: z
+    .object({
+      username: trimmedString("Usuário", 80),
+      name: trimmedString("Nome do usuário", 180),
+      password: passwordString,
+      role: userRoleSchema,
     })
     .strict(),
 };

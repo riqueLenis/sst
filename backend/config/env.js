@@ -7,9 +7,15 @@ const parseNumber = (value, fallback) => {
   return Number.isFinite(parsed) ? parsed : fallback;
 };
 
+const defaultCorsOrigins = [
+  "http://localhost:3000",
+  "http://127.0.0.1:3000",
+  "https://api.exingroup.com.br",
+];
+
 const parseOrigins = (value) => {
   if (!value) {
-    return ["http://localhost:3000", "http://127.0.0.1:3000"];
+    return defaultCorsOrigins;
   }
 
   return value

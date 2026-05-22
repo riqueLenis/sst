@@ -32,6 +32,13 @@ const toPublicUser = (user) => ({
   role: user.role,
 });
 
+const toManagedUser = (user) => ({
+  ...toPublicUser(user),
+  isActive: user.isActive,
+  createdAt: user.createdAt,
+  updatedAt: user.updatedAt,
+});
+
 export class AuthService {
   constructor(userRepository) {
     this.userRepository = userRepository;
@@ -41,6 +48,10 @@ export class AuthService {
 
   async bootstrapUsers() {
     await this.userRepository.deleteByRoles(["viewer"]);
+
+    if (defaultUsers.length === 0) {
+      return;
+    }
 
     const seedUsers = defaultUsers.map((user) => ({
       id: randomUUID(),
@@ -52,6 +63,37 @@ export class AuthService {
     }));
 
     await this.userRepository.seed(seedUsers);
+  }
+
+  async listUsers() {
+    const users = await this.userRepository.list();
+    return users.map((user) => toManagedUser(user));
+  }
+
+  async createUser({ username, name, password, role }) {
+    if (!userRoles.includes(role)) {
+      throw new HttpError(400, "Perfil de acesso inválido.");
+    }
+
+    const normalizedUsername = normalizeUsername(username);
+    const existingUser = await this.userRepository.findByUsername(
+      normalizedUsername,
+    );
+
+    if (existingUser) {
+      throw new HttpError(409, "Já existe um usuário com esse login.");
+    }
+
+    const createdUser = await this.userRepository.create({
+      id: randomUUID(),
+      username: normalizedUsername,
+      name,
+      role,
+      passwordHash: bcrypt.hashSync(password, 10),
+      isActive: true,
+    });
+
+    return toManagedUser(createdUser);
   }
 
   async login({ username, password }) {

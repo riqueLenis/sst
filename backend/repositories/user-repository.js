@@ -58,6 +58,14 @@ export class UserRepository {
     return this.mapRow(rows[0]);
   }
 
+  async list() {
+    const [rows] = await this.db.query(
+      "SELECT * FROM users ORDER BY created_at ASC, username ASC",
+    );
+
+    return rows.map((row) => this.mapRow(row));
+  }
+
   async create(user) {
     const timestamp = new Date();
     await this.db.query(

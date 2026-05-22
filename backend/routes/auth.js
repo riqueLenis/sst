@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { authSchemas } from "../lib/schemas.js";
-import { authenticate } from "../middlewares/authenticate.js";
+import { authenticate, authorize } from "../middlewares/authenticate.js";
 import { validateBody } from "../middlewares/validate-body.js";
 
 const handle = (handler) => (req, res, next) => {
@@ -20,6 +20,34 @@ export const createAuthRouter = (authService) => {
         data: session,
         meta: {
           message: "Autenticação realizada com sucesso.",
+        },
+      });
+    }),
+  );
+
+  router.get(
+    "/users",
+    authenticate(authService),
+    authorize("admin"),
+    handle(async (_req, res) => {
+      res.json({
+        data: await authService.listUsers(),
+      });
+    }),
+  );
+
+  router.post(
+    "/users",
+    authenticate(authService),
+    authorize("admin"),
+    validateBody(authSchemas.createUser),
+    handle(async (req, res) => {
+      const createdUser = await authService.createUser(req.validatedBody);
+
+      res.status(201).json({
+        data: createdUser,
+        meta: {
+          message: "Usuário criado com sucesso.",
         },
       });
     }),
