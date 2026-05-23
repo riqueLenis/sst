@@ -472,7 +472,7 @@ export default function Programs() {
                 <input
                   type="text"
                   required
-                  placeholder="Ex: PGR 2024 - Matriz"
+                  placeholder="Digite o título do documento"
                   value={formData.title}
                   onChange={(e) =>
                     setFormData({ ...formData, title: e.target.value })

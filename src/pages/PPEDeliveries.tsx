@@ -974,7 +974,7 @@ export default function PPEDeliveries() {
                         ? "border-red-300 bg-red-50/40"
                         : "border-slate-200"
                     }`}
-                    placeholder="Ex: desgaste do EPI anterior, avaria, perda de eficiência, ajuste de tamanho..."
+                    placeholder="Descreva o motivo da substituição"
                   />
                   {replacementReasonError && (
                     <p className="mt-2 text-xs font-medium text-red-600">

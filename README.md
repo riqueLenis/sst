@@ -13,6 +13,7 @@ O backend foi estruturado com node.js, express, MySQL local, repositórios, aute
 - cors com allowlist por ambiente
 - express-rate-limit
 - hpp
+- sessão de autenticação via cookie `HttpOnly`
 - validacao de payload por recurso
 - autenticacao bearer token
 - autorizacao por perfil
@@ -27,13 +28,14 @@ O backend foi estruturado com node.js, express, MySQL local, repositórios, aute
 
 - banco MySQL local em `localhost:3306`, database `sst`
 - repositórios para todos os domínios de negócio
-- seed inicial de dados e usuários
+- o sistema inicia sem dados fictícios
 
 ### Schema SQL
 
 - arquivo de schema em `backend/db/schema.mysql.sql`
 - importacao via CLI: `mysql -h localhost -P 3306 -u root -p < backend/db/schema.mysql.sql`
-- depois de importar, suba o backend uma vez para popular seeds e usuarios padrao
+- depois de importar, suba o backend uma vez para criar as tabelas e operar com dados reais
+- se o banco já recebeu dados fictícios antigos, execute `backend/db/cleanup.mock-data.sql`
 
 ### Recursos expostos
 
@@ -54,13 +56,7 @@ O backend foi estruturado com node.js, express, MySQL local, repositórios, aute
 
 ### Frontend
 
-O frontend agora consome a API autenticada e nao depende mais do `localStorage` do `AppContext` para manter o estado principal do sistema.
-
-### Usuarios seed para desenvolvimento
-
-- `admin / Admin@123`
-- `gestor / Gestor@123`
-- `tecnico / Tecnico@123`
+O frontend agora consome a API autenticada sem expor o token em `localStorage`; a sessão do navegador fica em cookie `HttpOnly` emitido pelo backend.
 
 ### Regras atuais de acesso
 
@@ -72,6 +68,8 @@ O frontend agora consome a API autenticada e nao depende mais do `localStorage` 
 
 - os dados persistem entre reinicializações porque agora ficam no MySQL local
 - o `.env` local já foi configurado com `MYSQL_HOST=localhost`, `MYSQL_USER=root`, `MYSQL_PASSWORD=lenis`, `MYSQL_DATABASE=sst`
+- o backend e o frontend não carregam mais dados de exemplo automaticamente
+- o login do navegador usa cookie `HttpOnly`; se precisar ajustar o nome/comportamento do cookie, use `AUTH_COOKIE_NAME`, `AUTH_COOKIE_SECURE` e `AUTH_COOKIE_SAME_SITE`
 - em produção, troque `JWT_SECRET` e ajuste `CORS_ORIGIN` caso o frontend rode em um dominio diferente de `api.exingroup.com.br`
 - sem `VITE_API_BASE_URL`, o frontend usa `http://localhost:4000` quando aberto em localhost e `https://api.exingroup.com.br` fora do ambiente local
 - `VITE_API_PROXY_TARGET` fica apontado para `http://localhost:4000` para manter o fluxo de desenvolvimento local

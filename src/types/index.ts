@@ -130,6 +130,10 @@ export interface AuthSession {
   user: AuthUser;
 }
 
+export interface AuthLoginResponse {
+  user: AuthUser;
+}
+
 export interface ManagedUser extends AuthUser {
   isActive: boolean;
   createdAt?: string;

@@ -368,7 +368,7 @@ export default function Companies() {
                     setFormData({ ...formData, name: event.target.value })
                   }
                   className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm"
-                  placeholder="Ex: Indústria Alpha S.A."
+                  placeholder="Digite a razão social"
                 />
               </div>
 

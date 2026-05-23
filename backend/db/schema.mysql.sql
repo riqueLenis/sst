@@ -132,4 +132,4 @@ CREATE TABLE IF NOT EXISTS `referrals` (
   KEY `idx_referrals_updated_at` (`updated_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- After importing this schema, start the backend once to populate seed data.
+-- After importing this schema, start the backend once to create empty tables without mock data.

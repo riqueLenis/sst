@@ -1,4 +1,5 @@
 import { HttpError } from "../lib/http-error.js";
+import { clearAuthCookie, readAuthCookieToken } from "../lib/auth-cookie.js";
 
 const extractBearerToken = (authorizationHeader) => {
   if (!authorizationHeader) {
@@ -20,9 +21,12 @@ export const authenticate = (authService) => async (req, _res, next) => {
     return;
   }
 
-  try {
-    const token = extractBearerToken(req.headers.authorization);
+  const bearerToken = extractBearerToken(req.headers.authorization);
+  const cookieToken = bearerToken ? null : readAuthCookieToken(req);
+  const token = bearerToken ?? cookieToken;
+  const tokenSource = bearerToken ? "header" : cookieToken ? "cookie" : null;
 
+  try {
     if (!token) {
       throw new HttpError(401, "Token de acesso ausente.");
     }
@@ -31,6 +35,10 @@ export const authenticate = (authService) => async (req, _res, next) => {
     req.authUser = await authService.verifyAccessToken(token);
     next();
   } catch (error) {
+    if (tokenSource === "cookie") {
+      clearAuthCookie(_res);
+    }
+
     next(error);
   }
 };

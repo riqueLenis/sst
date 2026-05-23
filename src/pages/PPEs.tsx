@@ -1211,7 +1211,7 @@ export default function PPEs() {
                     setFormData({ ...formData, name: e.target.value })
                   }
                   className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                  placeholder="Ex: Capacete de Segurança"
+                  placeholder="Digite o nome do EPI"
                 />
               </div>
               <div>
@@ -1226,7 +1226,7 @@ export default function PPEs() {
                     setFormData({ ...formData, ca: e.target.value })
                   }
                   className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                  placeholder="Ex: 12345"
+                  placeholder="Digite o CA"
                 />
               </div>
               <div>

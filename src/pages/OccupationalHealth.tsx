@@ -1054,7 +1054,7 @@ export default function OccupationalHealth() {
                       <input
                         type="text"
                         required
-                        placeholder="Ex: Oftalmologia"
+                        placeholder="Digite a especialidade"
                         value={referralData.specialty}
                         onChange={(e) =>
                           setReferralData({

@@ -34,6 +34,8 @@ export class ApiError extends Error {
   }
 }
 
+export const COOKIE_SESSION_TOKEN = "__cookie_session__";
+
 const LOCAL_API_BASE_URL = "http://localhost:4000";
 const PRODUCTION_API_BASE_URL = "https://api.exingroup.com.br";
 
@@ -72,11 +74,16 @@ const parseResponse = async <T>(response: Response) => {
 
 const request = async <T>(path: string, options: RequestOptions = {}) => {
   const { method = "GET", token, body, headers } = options;
+  const accessToken = token && token !== COOKIE_SESSION_TOKEN ? token : null;
+
   const response = await fetch(resolveApiPath(path), {
     method,
+    credentials: "include",
+    referrerPolicy: "strict-origin-when-cross-origin",
     headers: {
+      Accept: "application/json",
       ...(body ? { "Content-Type": "application/json" } : {}),
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
       ...headers,
     },
     body: body ? JSON.stringify(body) : undefined,

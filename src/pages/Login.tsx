@@ -4,6 +4,7 @@ import {
   Eye,
   EyeOff,
   KeyRound,
+  LoaderCircle,
   ShieldCheck,
   UserCircle2,
 } from "lucide-react";
@@ -160,8 +161,13 @@ export default function Login() {
               type="submit"
               className="btn-primary w-full justify-center"
               disabled={isSubmitting || isLoading}
+              aria-busy={isSubmitting}
             >
-              <ArrowRight className="h-4 w-4" />
+              {isSubmitting ? (
+                <LoaderCircle className="h-4 w-4 animate-spin" />
+              ) : (
+                <ArrowRight className="h-4 w-4" />
+              )}
               {isSubmitting ? "Validando sessão..." : "Entrar no sistema"}
             </button>
           </form>

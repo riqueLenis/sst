@@ -1,10 +1,49 @@
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import dotenv from "dotenv";
 
-dotenv.config();
+const currentFilePath = fileURLToPath(import.meta.url);
+const currentDirectory = path.dirname(currentFilePath);
+
+const envFileCandidates = [
+  path.resolve(process.cwd(), ".env.local"),
+  path.resolve(process.cwd(), ".env"),
+  path.resolve(currentDirectory, "../.env.local"),
+  path.resolve(currentDirectory, "../.env"),
+  path.resolve(currentDirectory, "../../.env.local"),
+  path.resolve(currentDirectory, "../../.env"),
+];
+
+const envFilePaths = [...new Set(envFileCandidates)].filter((filePath) =>
+  fs.existsSync(filePath),
+);
+
+dotenv.config(envFilePaths.length > 0 ? { path: envFilePaths } : undefined);
+
+const nodeEnv = process.env.NODE_ENV ?? "development";
 
 const parseNumber = (value, fallback) => {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : fallback;
+};
+
+const parseBoolean = (value, fallback) => {
+  if (value == null || value === "") {
+    return fallback;
+  }
+
+  const normalized = String(value).trim().toLowerCase();
+
+  if (["1", "true", "yes", "on"].includes(normalized)) {
+    return true;
+  }
+
+  if (["0", "false", "no", "off"].includes(normalized)) {
+    return false;
+  }
+
+  return fallback;
 };
 
 const normalizeOrigin = (value) =>
@@ -26,34 +65,53 @@ const parseOrigins = (value) => {
     return defaultCorsOrigins;
   }
 
-  return value
-    .split(",")
-    .map(normalizeOrigin)
-    .filter(Boolean);
+  return value.split(",").map(normalizeOrigin).filter(Boolean);
+};
+
+const readEnv = (...names) => {
+  for (const name of names) {
+    const value = process.env[name];
+
+    if (value != null && value !== "") {
+      return value;
+    }
+  }
+
+  return undefined;
 };
 
 export const env = {
-  nodeEnv: process.env.NODE_ENV ?? "development",
-  host: process.env.HOST ?? "0.0.0.0",
-  port: parseNumber(process.env.PORT, 4000),
-  mysqlHost: process.env.MYSQL_HOST ?? "localhost",
-  mysqlPort: parseNumber(process.env.MYSQL_PORT, 3306),
-  mysqlUser: process.env.MYSQL_USER ?? "root",
-  mysqlPassword: process.env.MYSQL_PASSWORD ?? "",
-  mysqlDatabase: process.env.MYSQL_DATABASE ?? "sst",
-  mysqlConnectionLimit: parseNumber(process.env.MYSQL_CONNECTION_LIMIT, 10),
-  trustProxy: process.env.TRUST_PROXY === "true",
-  corsOrigins: parseOrigins(process.env.CORS_ORIGIN),
+  nodeEnv,
+  host: readEnv("HOST") ?? "0.0.0.0",
+  port: parseNumber(readEnv("PORT"), 4000),
+  mysqlHost: readEnv("DB_HOST", "MYSQL_HOST") ?? "localhost",
+  mysqlPort: parseNumber(readEnv("DB_PORT", "MYSQL_PORT"), 3306),
+  mysqlUser: readEnv("DB_USER", "MYSQL_USER") ?? "root",
+  mysqlPassword: readEnv("DB_PASSWORD", "MYSQL_PASSWORD") ?? "",
+  mysqlDatabase: readEnv("DB_NAME", "MYSQL_DATABASE") ?? "sst",
+  mysqlConnectionLimit: parseNumber(readEnv("MYSQL_CONNECTION_LIMIT"), 10),
+  mysqlAutoCreateDatabase: parseBoolean(
+    readEnv("MYSQL_AUTO_CREATE_DATABASE"),
+    nodeEnv !== "production",
+  ),
+  trustProxy: readEnv("TRUST_PROXY") === "true",
+  corsOrigins: parseOrigins(readEnv("CORS_ORIGIN")),
   rateLimitWindowMs: parseNumber(
-    process.env.RATE_LIMIT_WINDOW_MS,
+    readEnv("RATE_LIMIT_WINDOW_MS"),
     15 * 60 * 1000,
   ),
-  rateLimitMax: parseNumber(process.env.RATE_LIMIT_MAX, 200),
-  bodyLimit: process.env.BODY_LIMIT ?? "12mb",
-  jwtSecret: process.env.JWT_SECRET ?? "dev-only-change-me",
-  jwtExpiresIn: process.env.JWT_EXPIRES_IN ?? "8h",
+  rateLimitMax: parseNumber(readEnv("RATE_LIMIT_MAX"), 200),
+  bodyLimit: readEnv("BODY_LIMIT") ?? "12mb",
+  authCookieName: readEnv("AUTH_COOKIE_NAME") ?? "sst_access_token",
+  authCookieSecure: parseBoolean(
+    readEnv("AUTH_COOKIE_SECURE"),
+    nodeEnv === "production",
+  ),
+  authCookieSameSite: readEnv("AUTH_COOKIE_SAME_SITE") ?? "strict",
+  jwtSecret: readEnv("AUTH_JWT_SECRET", "JWT_SECRET") ?? "dev-only-change-me",
+  jwtExpiresIn: readEnv("JWT_EXPIRES_IN") ?? "8h",
 };
 
 if (env.nodeEnv === "production" && env.jwtSecret === "dev-only-change-me") {
-  throw new Error("Configure JWT_SECRET antes de subir o backend em produção.");
+  throw new Error("Configure JWT_SECRET ou AUTH_JWT_SECRET antes de subir o backend em produção.");
 }

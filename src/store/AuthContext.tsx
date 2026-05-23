@@ -7,8 +7,8 @@ import React, {
   useState,
   type ReactNode,
 } from "react";
-import { apiClient } from "../lib/apiClient";
-import type { AuthSession, AuthUser } from "../types";
+import { apiClient, COOKIE_SESSION_TOKEN } from "../lib/apiClient";
+import type { AuthLoginResponse, AuthSession, AuthUser } from "../types";
 
 type AuthContextType = {
   user: AuthUser | null;
@@ -20,82 +20,42 @@ type AuthContextType = {
   refreshSession: () => Promise<void>;
 };
 
-const SESSION_STORAGE_KEY = "sst-auth-session";
-
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const readStoredSession = (): AuthSession | null => {
-  const rawValue = localStorage.getItem(SESSION_STORAGE_KEY);
-
-  if (!rawValue) {
-    return null;
-  }
-
-  try {
-    return JSON.parse(rawValue) as AuthSession;
-  } catch {
-    localStorage.removeItem(SESSION_STORAGE_KEY);
-    return null;
-  }
-};
-
-const persistSession = (session: AuthSession | null) => {
-  if (!session) {
-    localStorage.removeItem(SESSION_STORAGE_KEY);
-    return;
-  }
-
-  localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(session));
-};
+const buildCookieSession = (user: AuthUser): AuthSession => ({
+  token: COOKIE_SESSION_TOKEN,
+  user,
+});
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [session, setSession] = useState<AuthSession | null>(() =>
-    readStoredSession(),
-  );
+  const [session, setSession] = useState<AuthSession | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   const logout = useCallback(() => {
-    persistSession(null);
     setSession(null);
     setIsLoading(false);
   }, []);
 
   const refreshSession = useCallback(async () => {
-    const currentSession = readStoredSession();
-
-    if (!currentSession?.token) {
-      logout();
-      return;
-    }
+    setIsLoading(true);
 
     try {
-      const user = await apiClient.get<AuthUser>("/api/auth/me", {
-        token: currentSession.token,
-      });
-
-      const nextSession = {
-        token: currentSession.token,
-        user,
-      } satisfies AuthSession;
-
-      persistSession(nextSession);
-      setSession(nextSession);
+      const user = await apiClient.get<AuthUser>("/api/auth/me");
+      setSession(buildCookieSession(user));
     } catch {
-      logout();
-      return;
+      setSession(null);
+    } finally {
+      setIsLoading(false);
     }
-
-    setIsLoading(false);
-  }, [logout]);
+  }, []);
 
   const login = useCallback(async (username: string, password: string) => {
-    const sessionData = await apiClient.post<AuthSession>("/api/auth/login", {
+    const sessionData = await apiClient.post<AuthLoginResponse>("/api/auth/login", {
       username,
       password,
     });
 
-    persistSession(sessionData);
-    setSession(sessionData);
+    setSession(buildCookieSession(sessionData.user));
     setIsLoading(false);
   }, []);
 

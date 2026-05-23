@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { clearAuthCookie, setAuthCookie } from "../lib/auth-cookie.js";
 import { authSchemas } from "../lib/schemas.js";
 import { authenticate, authorize } from "../middlewares/authenticate.js";
 import { validateBody } from "../middlewares/validate-body.js";
@@ -15,9 +16,12 @@ export const createAuthRouter = (authService) => {
     validateBody(authSchemas.login),
     handle(async (req, res) => {
       const session = await authService.login(req.validatedBody);
+      setAuthCookie(res, session.token);
 
       res.json({
-        data: session,
+        data: {
+          user: session.user,
+        },
         meta: {
           message: "Autenticação realizada com sucesso.",
         },
@@ -70,6 +74,8 @@ export const createAuthRouter = (authService) => {
       if (req.authToken) {
         await authService.logout(req.authToken);
       }
+
+      clearAuthCookie(res);
 
       res.json({
         data: null,

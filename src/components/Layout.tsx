@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { apiClient } from "../lib/apiClient";
 import { cn } from "../lib/utils";
+import { useAppContext } from "../store/AppContext";
 import { useAuth } from "../store/AuthContext";
 
 type NavItem = {
@@ -134,6 +135,11 @@ export default function Layout() {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const location = useLocation();
   const { logout, token, user } = useAuth();
+  const {
+    error: appError,
+    isLoading: isAppLoading,
+    refreshData,
+  } = useAppContext();
   const isTechnician = user?.role === "technician";
   const visibleNavItems = useMemo(() => {
     if (user?.role === "admin") {
@@ -408,7 +414,44 @@ export default function Layout() {
 
           <main className="app-content">
             <div className="app-content-inner">
-              <Outlet />
+              {isAppLoading ? (
+                <div className="panel max-w-3xl">
+                  <div className="inline-flex h-14 w-14 items-center justify-center rounded-3xl bg-linear-to-br from-teal-500 to-sky-600 text-white shadow-lg shadow-sky-200/50">
+                    <LoaderCircle className="h-6 w-6 animate-spin" />
+                  </div>
+                  <p className="eyebrow mt-6">Sincronização inicial</p>
+                  <h1 className="panel-title mt-2">Carregando dados da operação</h1>
+                  <p className="panel-copy mt-3 max-w-2xl">
+                    Estamos conectando o frontend ao backend autenticado para montar o estado central da aplicação.
+                  </p>
+                </div>
+              ) : appError ? (
+                <div className="panel max-w-3xl">
+                  <p className="eyebrow">Falha de conexão</p>
+                  <h1 className="panel-title mt-2">Não foi possível sincronizar o sistema</h1>
+                  <p className="panel-copy mt-3 max-w-2xl">{appError}</p>
+                  <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+                    <button
+                      type="button"
+                      className="btn-primary"
+                      onClick={() => {
+                        void refreshData();
+                      }}
+                    >
+                      Tentar novamente
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-secondary"
+                      onClick={logout}
+                    >
+                      Encerrar sessão
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <Outlet />
+              )}
             </div>
           </main>
         </div>

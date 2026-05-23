@@ -727,7 +727,7 @@ export default function Financial() {
                 <input
                   type="text"
                   required
-                  placeholder="Ex: Faturamento Mensal, Compra de EPI..."
+                  placeholder="Descreva a transação"
                   value={formData.description}
                   onChange={(e) =>
                     setFormData({ ...formData, description: e.target.value })
@@ -744,7 +744,7 @@ export default function Financial() {
                   <input
                     type="text"
                     required
-                    placeholder="Ex: Treinamentos"
+                    placeholder="Digite a categoria"
                     value={formData.category}
                     onChange={(e) =>
                       setFormData({ ...formData, category: e.target.value })

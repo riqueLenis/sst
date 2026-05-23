@@ -518,7 +518,7 @@ export default function Sectors() {
                     })
                   }
                   className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                  placeholder="Ex: Produção"
+                  placeholder="Digite o nome do setor"
                 />
               </div>
               <div>
@@ -586,7 +586,7 @@ export default function Sectors() {
                     setRoleFormData({ ...roleFormData, name: e.target.value })
                   }
                   className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                  placeholder="Ex: Operador de Máquina"
+                  placeholder="Digite o nome do cargo"
                 />
               </div>
               <div>

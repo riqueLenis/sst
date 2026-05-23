@@ -544,44 +544,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
     ],
   );
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen px-4 py-6 sm:px-6 lg:px-8">
-        <div className="mx-auto flex min-h-[calc(100vh-3rem)] max-w-4xl items-center justify-center">
-          <div className="panel max-w-xl text-center">
-            <p className="eyebrow">Sincronização inicial</p>
-            <h1 className="panel-title mt-2">Carregando dados da operação</h1>
-            <p className="panel-copy mt-3">
-              Estamos conectando o frontend ao backend autenticado para montar o estado central da aplicação.
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="min-h-screen px-4 py-6 sm:px-6 lg:px-8">
-        <div className="mx-auto flex min-h-[calc(100vh-3rem)] max-w-4xl items-center justify-center">
-          <div className="panel max-w-xl text-center">
-            <p className="eyebrow">Falha de conexão</p>
-            <h1 className="panel-title mt-2">Não foi possível sincronizar o sistema</h1>
-            <p className="panel-copy mt-3">{error}</p>
-            <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center">
-              <button type="button" className="btn-primary" onClick={() => void refreshData()}>
-                Tentar novamente
-              </button>
-              <button type="button" className="btn-secondary" onClick={logout}>
-                Encerrar sessão
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <AppContext.Provider value={value}>{children}</AppContext.Provider>
   );

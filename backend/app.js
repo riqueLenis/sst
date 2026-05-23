@@ -90,6 +90,16 @@ const setSensitiveResponseHeaders = (_req, res, next) => {
   next();
 };
 
+const setBrowserSecurityHeaders = (_req, res, next) => {
+  res.setHeader(
+    "Permissions-Policy",
+    "camera=(), microphone=(), geolocation=(), browsing-topics=()",
+  );
+  res.setHeader("Cross-Origin-Opener-Policy", "same-origin");
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  next();
+};
+
 export const createApp = async () => {
   const app = express();
   const store = await MySqlStore.create();
@@ -114,9 +124,22 @@ export const createApp = async () => {
 
   app.use(
     helmet({
+      contentSecurityPolicy: false,
       crossOriginResourcePolicy: false,
+      frameguard: { action: "deny" },
+      hsts:
+        env.nodeEnv === "production"
+          ? {
+              maxAge: 31536000,
+              includeSubDomains: true,
+              preload: true,
+            }
+          : false,
+      permittedCrossDomainPolicies: { permittedPolicies: "none" },
+      referrerPolicy: { policy: "strict-origin-when-cross-origin" },
     }),
   );
+  app.use(setBrowserSecurityHeaders);
   app.use(hpp());
   app.use(cors(createCorsOptions()));
   app.use(express.json({ limit: env.bodyLimit }));
