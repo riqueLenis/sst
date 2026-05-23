@@ -4,6 +4,7 @@ import React, {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -30,30 +31,60 @@ const buildCookieSession = (user: AuthUser): AuthSession => ({
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [session, setSession] = useState<AuthSession | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const authRequestSequence = useRef(0);
+
+  const beginAuthRequest = () => {
+    authRequestSequence.current += 1;
+    return authRequestSequence.current;
+  };
+
+  const isLatestAuthRequest = (requestId: number) =>
+    authRequestSequence.current === requestId;
 
   const logout = useCallback(() => {
+    beginAuthRequest();
     setSession(null);
     setIsLoading(false);
   }, []);
 
   const refreshSession = useCallback(async () => {
+    const requestId = beginAuthRequest();
     setIsLoading(true);
 
     try {
       const user = await apiClient.get<AuthUser>("/api/auth/me");
+
+      if (!isLatestAuthRequest(requestId)) {
+        return;
+      }
+
       setSession(buildCookieSession(user));
     } catch {
+      if (!isLatestAuthRequest(requestId)) {
+        return;
+      }
+
       setSession(null);
     } finally {
-      setIsLoading(false);
+      if (isLatestAuthRequest(requestId)) {
+        setIsLoading(false);
+      }
     }
   }, []);
 
   const login = useCallback(async (username: string, password: string) => {
-    const sessionData = await apiClient.post<AuthLoginResponse>("/api/auth/login", {
-      username,
-      password,
-    });
+    const requestId = beginAuthRequest();
+    const sessionData = await apiClient.post<AuthLoginResponse>(
+      "/api/auth/login",
+      {
+        username,
+        password,
+      },
+    );
+
+    if (!isLatestAuthRequest(requestId)) {
+      return;
+    }
 
     setSession(buildCookieSession(sessionData.user));
     setIsLoading(false);

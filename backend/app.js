@@ -152,19 +152,20 @@ export const createApp = async () => {
     legacyHeaders: false,
     message: {
       error: {
-        message: "Limite de requisições excedido. Tente novamente em instantes.",
+        message:
+          "Limite de requisições excedido. Tente novamente em instantes.",
       },
     },
   });
 
   const loginLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000,
+    windowMs: 10 * 1000, // 10 segundos
     max: 10,
     standardHeaders: true,
     legacyHeaders: false,
     message: {
       error: {
-        message: "Muitas tentativas de login. Aguarde alguns minutos.",
+        message: "Muitas tentativas de login. Aguarde alguns segundos.",
       },
     },
   });
