@@ -242,7 +242,7 @@ export const createApiRouter = (store) => {
   router.get("/", (_req, res) => {
     res.json({
       data: {
-        name: "SST Backend API",
+        name: "EXIN Backend API",
         persistence: store.persistenceMode,
         resources: apiResources.map((resource) => ({
           name: resource.label,

@@ -22,6 +22,7 @@ import {
   X,
 } from "lucide-react";
 import { apiClient } from "../lib/apiClient";
+import { brand } from "../lib/brand";
 import { cn } from "../lib/utils";
 import { useAppContext } from "../store/AppContext";
 import { useAuth } from "../store/AuthContext";
@@ -122,11 +123,11 @@ function getRouteContext(pathname: string) {
   );
 
   return {
-    section: currentItem ? "Módulo ativo" : "Painel central",
-    label: currentItem?.name ?? "SST Command",
+    section: currentItem ? "Módulo ativo" : "Plataforma EXIN",
+    label: currentItem?.name ?? brand.platformName,
     description:
       currentItem?.description ??
-      "Centro operacional para Saúde e Segurança do Trabalho.",
+      brand.shortDescription,
   };
 }
 
@@ -176,7 +177,7 @@ export default function Layout() {
   );
   const userInitials = useMemo(() => {
     if (!user?.name) {
-      return "SS";
+      return "EX";
     }
 
     return user.name
@@ -237,16 +238,20 @@ export default function Layout() {
         <div className="app-sidebar-inner">
           <div className="flex items-start justify-between gap-4">
             <div className="sidebar-brand">
-              <span className="brand-mark">
-                <ShieldCheck className="h-6 w-6" />
+              <span className="brand-mark" aria-hidden="true">
+                <img
+                  src={brand.iconSrc}
+                  alt=""
+                  className="brand-icon-image"
+                />
               </span>
               <div className="sidebar-expandable sidebar-brand-copy">
-                <p className="brand-kicker">Operação central</p>
-                <h1 className="brand-title">SST Command</h1>
-                <p className="brand-copy">
-                  Monitoramento operacional para SST com leitura rápida,
-                  decisões mais claras e navegação consistente.
-                </p>
+                <img
+                  src={brand.logoSrc}
+                  alt={brand.fullName}
+                  className="brand-logo"
+                />
+                <p className="brand-copy">{brand.sidebarDescription}</p>
               </div>
             </div>
 
@@ -265,11 +270,11 @@ export default function Layout() {
               <div>
                 <span className="sidebar-note-label">Ambiente online</span>
                 <p className="sidebar-note-title">
-                  Gestão pronta para campo e escritório
+                  Operação EXIN pronta para campo e escritório
                 </p>
                 <p className="sidebar-note-copy">
-                  Interface otimizada para desktop, tablet e mobile, com acesso
-                  rápido aos módulos mais críticos.
+                  Identidade visual atualizada com foco nas rotinas mais
+                  importantes da operação.
                 </p>
               </div>
               <Sparkles className="sidebar-note-icon h-5 w-5" />
@@ -330,10 +335,10 @@ export default function Layout() {
 
           <div className="sidebar-expandable-block">
             <div className="sidebar-footer">
-              <p className="sidebar-footer-title">Rotina centralizada</p>
+              <p className="sidebar-footer-title">Gestão integrada EXIN</p>
               <p className="sidebar-footer-copy">
                 Empresas, pessoas, saúde ocupacional, programas e financeiro em
-                uma navegação única e previsível.
+                uma navegação única e alinhada à nova identidade.
               </p>
             </div>
           </div>
@@ -416,7 +421,7 @@ export default function Layout() {
             <div className="app-content-inner">
               {isAppLoading ? (
                 <div className="panel max-w-3xl">
-                  <div className="inline-flex h-14 w-14 items-center justify-center rounded-3xl bg-linear-to-br from-teal-500 to-sky-600 text-white shadow-lg shadow-sky-200/50">
+                  <div className="inline-flex h-14 w-14 items-center justify-center rounded-3xl bg-linear-to-br from-[#2cb897] to-[#163e70] text-white shadow-lg shadow-[#163e70]/25">
                     <LoaderCircle className="h-6 w-6 animate-spin" />
                   </div>
                   <p className="eyebrow mt-6">Sincronização inicial</p>

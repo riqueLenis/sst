@@ -1,7 +1,7 @@
 import React, { Suspense, lazy } from "react";
 import { BrowserRouter as Router, Navigate, Route, Routes } from "react-router-dom";
-import { ShieldCheck } from "lucide-react";
 import ProtectedRoute from "./components/ProtectedRoute";
+import { brand } from "./lib/brand";
 import { AuthProvider } from "./store/AuthContext";
 import { AppProvider } from "./store/AppContext";
 import { useAuth } from "./store/AuthContext";
@@ -26,8 +26,8 @@ function AppFallback() {
       <div className="mx-auto flex max-w-7xl gap-6 lg:min-h-[calc(100vh-3rem)]">
         <div className="hidden w-78 shrink-0 rounded-4xl border border-white/10 bg-slate-900 p-6 shadow-2xl shadow-slate-900/30 lg:flex lg:flex-col lg:justify-between">
           <div>
-            <div className="mb-6 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-linear-to-br from-teal-400/30 to-sky-400/40 text-white">
-              <ShieldCheck className="h-6 w-6" />
+            <div className="mb-6 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-linear-to-br from-[#2cb897]/25 to-[#163e70]/35 text-white">
+              <img src={brand.iconSrc} alt="" className="h-6 w-6 object-contain" />
             </div>
             <div className="h-3 w-32 rounded-full bg-white/15" />
             <div className="mt-3 h-7 w-44 rounded-full bg-white/10" />

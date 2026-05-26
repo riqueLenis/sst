@@ -5,17 +5,17 @@ import {
   EyeOff,
   KeyRound,
   LoaderCircle,
-  ShieldCheck,
   UserCircle2,
 } from "lucide-react";
 import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import { getApiErrorMessage } from "../lib/apiClient";
+import { brand } from "../lib/brand";
 import { useAuth } from "../store/AuthContext";
 
 const securityHighlights = [
-  "Credenciais não ficam mais expostas na tela inicial.",
-  "O acesso depende de contas geridas diretamente pelo administrador.",
-  "Cada perfil recebe somente os módulos permitidos para sua função.",
+  "Sessões seguras e acessos organizados pela administração da plataforma.",
+  "Permissões operacionais aplicadas conforme o perfil de cada usuário.",
+  "Identidade EXIN integrada ao fluxo principal de acesso e navegação.",
 ];
 
 export default function Login() {
@@ -57,14 +57,21 @@ export default function Login() {
   return (
     <div className="min-h-screen px-4 py-4 sm:px-6 sm:py-6 lg:px-8">
       <div className="mx-auto grid min-h-[calc(100vh-2rem)] max-w-7xl items-stretch gap-4 lg:min-h-[calc(100vh-3rem)] lg:grid-cols-[minmax(0,1.08fr)_minmax(24rem,0.92fr)] lg:gap-6">
-        <section className="hero-card order-2 flex flex-col justify-between gap-6 overflow-hidden p-5 sm:p-6 lg:order-1 lg:p-8">
+        <section className="hero-card login-hero-card order-2 flex flex-col justify-between gap-6 overflow-hidden p-5 sm:p-6 lg:order-1 lg:p-8">
           <div>
-            <span className="hero-accent">Acesso seguro</span>
+            <div className="login-brand-logo-shell">
+              <img
+                src={brand.logoSrc}
+                alt={brand.fullName}
+                className="login-brand-logo"
+              />
+            </div>
+            <span className="hero-accent mt-6">Plataforma EXIN</span>
             <h1 className="hero-title mt-3 max-w-2xl">
-              Entre no painel SST com autenticação real e permissões por perfil.
+              {brand.loginHeadline}
             </h1>
             <p className="hero-description mt-4 max-w-2xl">
-              O frontend consome a API autenticada com sessão validada no backend e permissões aplicadas por usuário cadastrado.
+              {brand.loginDescription}
             </p>
           </div>
 
@@ -72,26 +79,26 @@ export default function Login() {
             {securityHighlights.map((highlight) => (
               <div
                 key={highlight}
-                className="rounded-3xl border border-white/60 bg-white/80 p-4 text-left shadow-lg shadow-slate-200/40 sm:p-5"
+                className="login-feature-card rounded-3xl p-4 text-left sm:p-5"
               >
-                <p className="text-sm font-semibold text-slate-900">
+                <p className="login-feature-title text-sm font-semibold">
                   Controle de acesso
                 </p>
-                <p className="mt-3 text-sm text-slate-600">{highlight}</p>
+                <p className="login-feature-copy mt-3 text-sm">{highlight}</p>
               </div>
             ))}
           </div>
         </section>
 
         <section className="panel order-1 mx-auto flex w-full max-w-xl flex-col justify-center p-5 sm:p-6 lg:order-2 lg:max-w-none lg:p-8">
-          <div className="mb-6 inline-flex h-14 w-14 items-center justify-center rounded-3xl bg-linear-to-br from-teal-500 to-sky-600 text-white shadow-lg shadow-sky-200/50">
-            <ShieldCheck className="h-7 w-7" />
+          <div className="login-panel-brand mb-6 inline-flex h-14 w-14 items-center justify-center rounded-3xl">
+            <img src={brand.iconSrc} alt="" className="login-panel-icon" />
           </div>
 
           <p className="eyebrow">Login</p>
-          <h2 className="panel-title mt-2">Sessão operacional</h2>
+          <h2 className="panel-title mt-2">Acesso à plataforma</h2>
           <p className="panel-copy mt-3">
-            Use um perfil autorizado para acessar o painel e operar os módulos do sistema.
+            Use um perfil autorizado para acessar a operação EXIN e os módulos principais do sistema.
           </p>
 
           <form onSubmit={handleSubmit} className="mt-8 space-y-5">
@@ -99,8 +106,8 @@ export default function Login() {
               <label className="mb-1.5 block text-sm font-semibold text-slate-700">
                 Usuário
               </label>
-              <div className="group flex min-h-[3.35rem] items-center gap-3 rounded-2xl border border-slate-200 bg-white/92 px-4 transition-all duration-200 focus-within:border-sky-200 focus-within:bg-white focus-within:shadow-[0_0_0_4px_rgba(14,116,144,0.12)]">
-                <UserCircle2 className="h-5 w-5 shrink-0 text-slate-400 transition-colors duration-200 group-focus-within:text-sky-600" />
+              <div className="group flex min-h-[3.35rem] items-center gap-3 rounded-2xl border border-slate-200 bg-white/92 px-4 transition-all duration-200 focus-within:border-emerald-200 focus-within:bg-white focus-within:shadow-[0_0_0_4px_rgba(44,184,151,0.14)]">
+                <UserCircle2 className="h-5 w-5 shrink-0 text-slate-400 transition-colors duration-200 group-focus-within:text-[#163e70]" />
                 <input
                   value={credentials.username}
                   onChange={(event) =>
@@ -121,8 +128,8 @@ export default function Login() {
               <label className="mb-1.5 block text-sm font-semibold text-slate-700">
                 Senha
               </label>
-              <div className="group flex min-h-[3.35rem] items-center gap-3 rounded-2xl border border-slate-200 bg-white/92 px-4 transition-all duration-200 focus-within:border-sky-200 focus-within:bg-white focus-within:shadow-[0_0_0_4px_rgba(14,116,144,0.12)]">
-                <KeyRound className="h-5 w-5 shrink-0 text-slate-400 transition-colors duration-200 group-focus-within:text-sky-600" />
+              <div className="group flex min-h-[3.35rem] items-center gap-3 rounded-2xl border border-slate-200 bg-white/92 px-4 transition-all duration-200 focus-within:border-emerald-200 focus-within:bg-white focus-within:shadow-[0_0_0_4px_rgba(44,184,151,0.14)]">
+                <KeyRound className="h-5 w-5 shrink-0 text-slate-400 transition-colors duration-200 group-focus-within:text-[#163e70]" />
                 <input
                   type={isPasswordVisible ? "text" : "password"}
                   value={credentials.password}

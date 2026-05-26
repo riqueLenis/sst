@@ -3,29 +3,29 @@
 
 :root {
   color-scheme: light;
-  --bg-base: #f3f7fb;
+  --bg-base: #eef6f5;
   --surface: rgba(255, 255, 255, 0.9);
   --surface-strong: rgba(255, 255, 255, 0.96);
-  --surface-muted: rgba(241, 245, 249, 0.82);
-  --surface-dark: rgba(15, 23, 42, 0.94);
-  --line: rgba(148, 163, 184, 0.22);
-  --line-strong: rgba(100, 116, 139, 0.28);
-  --text: #0f172a;
-  --muted: #475569;
-  --muted-soft: #64748b;
-  --brand: #0f766e;
-  --brand-strong: #0f5f59;
-  --accent: #0369a1;
-  --accent-soft: rgba(14, 165, 233, 0.14);
-  --success: #047857;
+  --surface-muted: rgba(239, 247, 246, 0.86);
+  --surface-dark: rgba(12, 31, 59, 0.95);
+  --line: rgba(74, 112, 134, 0.18);
+  --line-strong: rgba(56, 95, 121, 0.28);
+  --text: #12284c;
+  --muted: #46657a;
+  --muted-soft: #688295;
+  --brand: #2cb897;
+  --brand-strong: #219c81;
+  --accent: #163e70;
+  --accent-soft: rgba(22, 62, 112, 0.12);
+  --success: #1f9c7d;
   --warning: #b45309;
   --danger: #b91c1c;
-  --ring: rgba(14, 116, 144, 0.18);
-  --shadow-soft: 0 24px 60px -30px rgba(15, 23, 42, 0.22);
+  --ring: rgba(44, 184, 151, 0.18);
+  --shadow-soft: 0 24px 60px -30px rgba(18, 40, 76, 0.22);
   --shadow-card:
-    0 22px 45px -28px rgba(15, 23, 42, 0.26),
-    0 14px 20px -18px rgba(15, 23, 42, 0.18);
-  --shadow-modal: 0 40px 90px -36px rgba(15, 23, 42, 0.44);
+    0 22px 45px -28px rgba(18, 40, 76, 0.22),
+    0 14px 20px -18px rgba(18, 40, 76, 0.14);
+  --shadow-modal: 0 40px 90px -36px rgba(18, 40, 76, 0.28);
   --sidebar-width: 15.25rem;
   --sidebar-collapsed-width: 4.9rem;
   --sidebar-transition: 440ms cubic-bezier(0.22, 1, 0.36, 1);
@@ -48,15 +48,15 @@ body {
   background:
     radial-gradient(
       circle at top left,
-      rgba(14, 165, 233, 0.18),
+      rgba(22, 62, 112, 0.16),
       transparent 28%
     ),
     radial-gradient(
       circle at top right,
-      rgba(16, 185, 129, 0.12),
+      rgba(44, 184, 151, 0.14),
       transparent 24%
     ),
-    linear-gradient(180deg, #eef4f8 0%, #f8fafc 34%, #f1f5f9 100%);
+    linear-gradient(180deg, #edf5f5 0%, #f7fbfb 34%, #eef5f7 100%);
 }
 
 body::before,
@@ -74,7 +74,7 @@ body::before {
   right: -5rem;
   width: 18rem;
   height: 18rem;
-  background: rgba(14, 165, 233, 0.12);
+  background: rgba(22, 62, 112, 0.12);
 }
 
 body::after {
@@ -82,7 +82,7 @@ body::after {
   left: -4rem;
   width: 16rem;
   height: 16rem;
-  background: rgba(16, 185, 129, 0.1);
+  background: rgba(44, 184, 151, 0.1);
 }
 
 #root {
@@ -213,8 +213,9 @@ thead th {
   border: 1px solid rgba(226, 232, 240, 0.14);
   background: linear-gradient(
     180deg,
-    rgba(12, 21, 38, 0.96) 0%,
-    rgba(15, 23, 42, 0.92) 100%
+    rgba(10, 27, 56, 0.98) 0%,
+    rgba(17, 55, 92, 0.96) 54%,
+    rgba(24, 88, 92, 0.94) 100%
   );
   box-shadow: 0 34px 74px -36px rgba(2, 8, 23, 0.66);
   backdrop-filter: blur(24px);
@@ -251,13 +252,22 @@ thead th {
   width: 2.65rem;
   height: 2.65rem;
   border-radius: 0.85rem;
-  background: linear-gradient(
-    135deg,
-    rgba(45, 212, 191, 0.24),
-    rgba(14, 165, 233, 0.34)
-  );
-  color: #ecfeff;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.08);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+
+.brand-icon-image {
+  width: 1.7rem;
+  height: 1.7rem;
+  object-fit: contain;
+}
+
+.brand-logo {
+  display: block;
+  width: min(11.25rem, 100%);
+  height: auto;
+  object-fit: contain;
 }
 
 .brand-kicker {
@@ -281,7 +291,7 @@ thead th {
 
 .brand-copy {
   margin: 0.4rem 0 0;
-  max-width: 13rem;
+  max-width: 14rem;
   font-size: 0.78rem;
   line-height: 1.45;
   color: rgba(203, 213, 225, 0.78);
@@ -323,8 +333,12 @@ thead th {
   gap: 0.4rem;
   padding: 0.3rem 0.55rem;
   border-radius: 9999px;
-  background: rgba(14, 165, 233, 0.14);
-  color: #bae6fd;
+  background: linear-gradient(
+    135deg,
+    rgba(44, 184, 151, 0.18),
+    rgba(22, 62, 112, 0.2)
+  );
+  color: #d5fff2;
   font-size: 0.62rem;
   font-weight: 700;
   letter-spacing: 0.14em;
@@ -348,7 +362,7 @@ thead th {
 .sidebar-note-icon {
   flex-shrink: 0;
   margin-top: 0.15rem;
-  color: rgba(45, 212, 191, 0.9);
+  color: rgba(90, 250, 209, 0.9);
 }
 
 .app-nav {
@@ -405,11 +419,11 @@ thead th {
 
 .nav-link-active {
   color: #f8fafc;
-  border-color: rgba(125, 211, 252, 0.24);
+  border-color: rgba(108, 197, 171, 0.28);
   background: linear-gradient(
     135deg,
-    rgba(15, 118, 110, 0.28),
-    rgba(3, 105, 161, 0.22)
+    rgba(44, 184, 151, 0.3),
+    rgba(22, 62, 112, 0.24)
   );
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
@@ -475,7 +489,11 @@ thead th {
   padding: 1rem 1.1rem;
   border: 1px solid var(--line);
   border-radius: 1.6rem;
-  background: rgba(255, 255, 255, 0.78);
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.82) 0%,
+    rgba(241, 248, 247, 0.86) 100%
+  );
   box-shadow: var(--shadow-soft);
   backdrop-filter: blur(20px);
   position: sticky;
@@ -541,7 +559,7 @@ thead th {
 .app-icon-button:hover {
   transform: translateY(-1px);
   color: var(--text);
-  border-color: rgba(14, 116, 144, 0.22);
+  border-color: rgba(44, 184, 151, 0.26);
   background: rgba(255, 255, 255, 0.92);
 }
 
@@ -577,11 +595,11 @@ thead th {
   width: 2.15rem;
   height: 2.15rem;
   border-radius: 9999px;
-  background: linear-gradient(135deg, #0f766e 0%, #0284c7 100%);
+  background: linear-gradient(135deg, var(--brand) 0%, var(--accent) 100%);
   color: #fff;
   font-size: 0.82rem;
   font-weight: 800;
-  box-shadow: 0 14px 30px -18px rgba(2, 132, 199, 0.7);
+  box-shadow: 0 14px 30px -18px rgba(22, 62, 112, 0.42);
 }
 
 .header-user-name {
@@ -648,8 +666,8 @@ thead th {
   color: var(--text);
   background: linear-gradient(
     135deg,
-    rgba(15, 118, 110, 0.14),
-    rgba(3, 105, 161, 0.12)
+    rgba(44, 184, 151, 0.16),
+    rgba(22, 62, 112, 0.12)
   );
 }
 
@@ -672,8 +690,8 @@ thead th {
   border-radius: 1.7rem;
   background: linear-gradient(
     180deg,
-    rgba(255, 255, 255, 0.95) 0%,
-    rgba(248, 250, 252, 0.94) 100%
+    rgba(255, 255, 255, 0.96) 0%,
+    rgba(241, 248, 247, 0.94) 100%
   );
   box-shadow: var(--shadow-card);
 }
@@ -688,7 +706,11 @@ thead th {
   gap: 0.45rem;
   padding: 0.48rem 0.85rem;
   border-radius: 9999px;
-  background: var(--accent-soft);
+  background: linear-gradient(
+    135deg,
+    rgba(44, 184, 151, 0.16),
+    rgba(22, 62, 112, 0.12)
+  );
   color: var(--accent);
   font-size: 0.74rem;
   font-weight: 800;
@@ -904,8 +926,8 @@ thead th {
 .btn-primary {
   color: #fff;
   border: 1px solid transparent;
-  background: linear-gradient(135deg, #0f766e 0%, #0284c7 100%);
-  box-shadow: 0 18px 32px -20px rgba(3, 105, 161, 0.62);
+  background: linear-gradient(135deg, var(--brand) 0%, var(--accent) 100%);
+  box-shadow: 0 18px 32px -20px rgba(22, 62, 112, 0.45);
 }
 
 .btn-secondary {
@@ -917,7 +939,108 @@ thead th {
 .btn-soft {
   color: var(--accent);
   border: 1px solid transparent;
-  background: rgba(14, 165, 233, 0.12);
+  background: linear-gradient(
+    135deg,
+    rgba(44, 184, 151, 0.12),
+    rgba(22, 62, 112, 0.08)
+  );
+}
+
+.login-hero-card {
+  position: relative;
+  border-color: rgba(255, 255, 255, 0.08);
+  background: linear-gradient(
+    145deg,
+    rgba(11, 28, 58, 0.98) 0%,
+    rgba(18, 62, 96, 0.96) 52%,
+    rgba(37, 124, 118, 0.93) 100%
+  );
+  box-shadow: 0 40px 90px -48px rgba(12, 31, 59, 0.78);
+}
+
+.login-hero-card::before {
+  position: absolute;
+  content: "";
+  width: 18rem;
+  height: 18rem;
+  right: -5rem;
+  top: -6rem;
+  border-radius: 9999px;
+  background: radial-gradient(
+    circle,
+    rgba(255, 255, 255, 0.18) 0%,
+    rgba(255, 255, 255, 0) 72%
+  );
+  pointer-events: none;
+}
+
+.login-brand-logo-shell {
+  display: inline-flex;
+  max-width: min(100%, 34rem);
+  padding: 1rem 1.15rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 1.55rem;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.12) 0%,
+    rgba(255, 255, 255, 0.04) 100%
+  );
+  backdrop-filter: blur(12px);
+}
+
+.login-brand-logo {
+  display: block;
+  width: min(100%, 31rem);
+  height: auto;
+  object-fit: contain;
+}
+
+.login-hero-card .hero-accent {
+  color: #e8fff8;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.16),
+    rgba(255, 255, 255, 0.08)
+  );
+}
+
+.login-hero-card .hero-title,
+.login-hero-card .hero-description {
+  color: #f8fbfc;
+}
+
+.login-hero-card .hero-description {
+  color: rgba(232, 244, 248, 0.86);
+}
+
+.login-feature-card {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.16) 0%,
+    rgba(255, 255, 255, 0.1) 100%
+  );
+  box-shadow: 0 18px 30px -26px rgba(9, 20, 43, 0.45);
+  backdrop-filter: blur(10px);
+}
+
+.login-feature-title {
+  color: #f8fbfc;
+}
+
+.login-feature-copy {
+  color: rgba(233, 244, 247, 0.82);
+}
+
+.login-panel-brand {
+  background: linear-gradient(135deg, rgba(44, 184, 151, 0.16), rgba(22, 62, 112, 0.14));
+  box-shadow: 0 18px 34px -24px rgba(22, 62, 112, 0.28);
+}
+
+.login-panel-icon {
+  width: 1.95rem;
+  height: 1.95rem;
+  object-fit: contain;
 }
 
 .search-shell {

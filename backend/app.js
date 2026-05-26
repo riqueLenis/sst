@@ -181,7 +181,7 @@ export const createApp = async () => {
 
   app.get("/", (_req, res) => {
     res.json({
-      name: "SST Backend API",
+      name: "EXIN Backend API",
       version: "1.0.0",
       persistence: store.persistenceMode,
       apiBase: "/api",
