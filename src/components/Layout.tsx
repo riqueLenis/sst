@@ -19,7 +19,6 @@ import {
   Stethoscope,
   type LucideIcon,
   Users,
-  X,
 } from "lucide-react";
 import { apiClient } from "../lib/apiClient";
 import { brand } from "../lib/brand";
@@ -236,33 +235,22 @@ export default function Layout() {
         )}
       >
         <div className="app-sidebar-inner">
-          <div className="flex items-start justify-between gap-4">
-            <div className="sidebar-brand">
-              <span className="brand-mark" aria-hidden="true">
-                <img
-                  src={brand.iconSrc}
-                  alt=""
-                  className="brand-icon-image"
-                />
-              </span>
-              <div className="sidebar-expandable sidebar-brand-copy">
-                <img
-                  src={brand.logoSrc}
-                  alt={brand.fullName}
-                  className="brand-logo"
-                />
-                <p className="brand-copy">{brand.sidebarDescription}</p>
-              </div>
+          <div className="sidebar-brand">
+            <span className="brand-mark" aria-hidden="true">
+              <img
+                src={brand.iconSrc}
+                alt=""
+                className="brand-icon-image"
+              />
+            </span>
+            <div className="sidebar-expandable sidebar-brand-copy">
+              <img
+                src={brand.logoSrc}
+                alt={brand.fullName}
+                className="brand-logo"
+              />
+              <p className="brand-copy">{brand.sidebarDescription}</p>
             </div>
-
-            <button
-              onClick={() => setSidebarOpen(false)}
-              className="app-icon-button lg:hidden"
-              type="button"
-              aria-label="Fechar menu"
-            >
-              <X className="h-5 w-5" />
-            </button>
           </div>
 
           <div className="sidebar-expandable-block">
@@ -483,12 +471,8 @@ export default function Layout() {
               sidebarOpen && "mobile-nav-item-active",
             )}
           >
-            {sidebarOpen ? (
-              <X className="h-4 w-4" />
-            ) : (
-              <Menu className="h-4 w-4" />
-            )}
-            <span>Menu</span>
+            <Menu className="h-4 w-4" />
+            <span>{sidebarOpen ? "Fechar" : "Menu"}</span>
           </button>
         </nav>
       </div>
