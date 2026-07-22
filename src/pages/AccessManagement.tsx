@@ -1,5 +1,16 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { KeyRound, Plus, ShieldCheck, UserPlus, Users } from "lucide-react";
+import {
+  KeyRound,
+  LoaderCircle,
+  Pencil,
+  Plus,
+  Save,
+  ShieldCheck,
+  Trash2,
+  UserPlus,
+  Users,
+  X,
+} from "lucide-react";
 import { apiClient, getApiErrorMessage } from "../lib/apiClient";
 import { useAuth } from "../store/AuthContext";
 import type { ManagedUser, UserRole } from "../types";
@@ -9,6 +20,7 @@ type UserFormState = {
   username: string;
   password: string;
   role: UserRole;
+  isActive: boolean;
 };
 
 const initialFormState: UserFormState = {
@@ -16,6 +28,7 @@ const initialFormState: UserFormState = {
   username: "",
   password: "",
   role: "manager",
+  isActive: true,
 };
 
 const roleLabels: Record<UserRole, string> = {
@@ -25,13 +38,17 @@ const roleLabels: Record<UserRole, string> = {
 };
 
 export default function AccessManagement() {
-  const { token } = useAuth();
+  const { token, user: currentUser } = useAuth();
   const [users, setUsers] = useState<ManagedUser[]>([]);
   const [formData, setFormData] = useState<UserFormState>(initialFormState);
+  const [editingUserId, setEditingUserId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
+
+  const isEditing = editingUserId !== null;
 
   const loadUsers = useCallback(async () => {
     if (!token) {
@@ -78,10 +95,31 @@ export default function AccessManagement() {
     [users],
   );
 
+  const resetForm = () => {
+    setFormData(initialFormState);
+    setEditingUserId(null);
+  };
+
+  const startEdit = (user: ManagedUser) => {
+    setEditingUserId(user.id);
+    setFormData({
+      name: user.name,
+      username: user.username,
+      password: "",
+      role: user.role,
+      isActive: user.isActive,
+    });
+    setError(null);
+    setSuccessMessage(null);
+    if (typeof window !== "undefined") {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  };
+
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
 
-    if (!token) {
+    if (!token || isSubmitting) {
       return;
     }
 
@@ -90,16 +128,76 @@ export default function AccessManagement() {
     setSuccessMessage(null);
 
     try {
-      await apiClient.post<ManagedUser>("/api/auth/users", formData, {
-        token,
-      });
-      setFormData(initialFormState);
-      setSuccessMessage("Novo acesso criado com sucesso.");
+      if (editingUserId) {
+        const changes: Record<string, unknown> = {
+          name: formData.name,
+          role: formData.role,
+          isActive: formData.isActive,
+        };
+
+        if (formData.password.trim().length > 0) {
+          changes.password = formData.password;
+        }
+
+        await apiClient.patch<ManagedUser>(
+          `/api/auth/users/${editingUserId}`,
+          changes,
+          { token },
+        );
+        setSuccessMessage("Usuário atualizado com sucesso.");
+      } else {
+        await apiClient.post<ManagedUser>(
+          "/api/auth/users",
+          {
+            name: formData.name,
+            username: formData.username,
+            password: formData.password,
+            role: formData.role,
+          },
+          { token },
+        );
+        setSuccessMessage("Novo acesso criado com sucesso.");
+      }
+
+      resetForm();
       await loadUsers();
     } catch (currentError) {
       setError(getApiErrorMessage(currentError));
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleDelete = async (user: ManagedUser) => {
+    if (!token || deletingUserId) {
+      return;
+    }
+
+    if (
+      !window.confirm(
+        `Excluir o acesso de "${user.name}" (@${user.username})? Esta ação não pode ser desfeita.`,
+      )
+    ) {
+      return;
+    }
+
+    setDeletingUserId(user.id);
+    setError(null);
+    setSuccessMessage(null);
+
+    try {
+      await apiClient.delete(`/api/auth/users/${user.id}`, { token });
+
+      if (editingUserId === user.id) {
+        resetForm();
+      }
+
+      setSuccessMessage("Usuário removido com sucesso.");
+      await loadUsers();
+    } catch (currentError) {
+      setError(getApiErrorMessage(currentError));
+    } finally {
+      setDeletingUserId(null);
     }
   };
 
@@ -164,10 +262,14 @@ export default function AccessManagement() {
         <div className="panel">
           <div className="panel-heading">
             <div>
-              <p className="eyebrow">Novo login</p>
-              <h2 className="panel-title">Cadastrar usuário</h2>
+              <p className="eyebrow">{isEditing ? "Editar acesso" : "Novo login"}</p>
+              <h2 className="panel-title">
+                {isEditing ? "Editar usuário" : "Cadastrar usuário"}
+              </h2>
               <p className="panel-copy">
-                Defina nome, login, senha e perfil para liberar o acesso pelo banco.
+                {isEditing
+                  ? "Atualize nome, perfil, situação e, se desejar, defina uma nova senha."
+                  : "Defina nome, login, senha e perfil para liberar o acesso pelo banco."}
               </p>
             </div>
           </div>
@@ -196,17 +298,23 @@ export default function AccessManagement() {
                 onChange={(event) =>
                   updateField("username", event.target.value)
                 }
-                className="search-input"
+                className="search-input disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500"
                 placeholder="Ex.: saulo"
                 autoComplete="username"
                 spellCheck={false}
-                required
+                required={!isEditing}
+                disabled={isEditing}
               />
+              {isEditing && (
+                <p className="mt-1.5 text-xs text-slate-500">
+                  O login não pode ser alterado após a criação.
+                </p>
+              )}
             </div>
 
             <div>
               <label className="mb-1.5 block text-sm font-semibold text-slate-700">
-                Senha inicial
+                {isEditing ? "Nova senha (opcional)" : "Senha inicial"}
               </label>
               <input
                 type="password"
@@ -215,13 +323,19 @@ export default function AccessManagement() {
                   updateField("password", event.target.value)
                 }
                 className="search-input"
-                placeholder="Informe uma senha forte"
+                placeholder={
+                  isEditing
+                    ? "Deixe em branco para manter a senha atual"
+                    : "Informe uma senha forte"
+                }
                 autoComplete="new-password"
-                required
-                minLength={6}
+                required={!isEditing}
+                minLength={8}
               />
               <p className="mt-1.5 text-xs text-slate-500">
-                Mínimo de 6 caracteres.
+                {isEditing
+                  ? "Preencha apenas se quiser trocar a senha (mínimo de 8 caracteres, com letras e números)."
+                  : "Mínimo de 8 caracteres, com letras e números."}
               </p>
             </div>
 
@@ -242,6 +356,24 @@ export default function AccessManagement() {
               </select>
             </div>
 
+            {isEditing && (
+              <div>
+                <label className="mb-1.5 block text-sm font-semibold text-slate-700">
+                  Situação
+                </label>
+                <select
+                  value={formData.isActive ? "active" : "inactive"}
+                  onChange={(event) =>
+                    updateField("isActive", event.target.value === "active")
+                  }
+                  className="search-input"
+                >
+                  <option value="active">Ativo</option>
+                  <option value="inactive">Inativo</option>
+                </select>
+              </div>
+            )}
+
             {error && (
               <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
                 {error}
@@ -254,14 +386,40 @@ export default function AccessManagement() {
               </div>
             )}
 
-            <button
-              type="submit"
-              className="btn-primary w-full justify-center"
-              disabled={isSubmitting}
-            >
-              <Plus className="h-4 w-4" />
-              {isSubmitting ? "Criando login..." : "Criar acesso"}
-            </button>
+            <div className="flex flex-col gap-3 sm:flex-row">
+              {isEditing && (
+                <button
+                  type="button"
+                  className="btn-secondary w-full justify-center sm:w-auto"
+                  onClick={resetForm}
+                  disabled={isSubmitting}
+                >
+                  <X className="h-4 w-4" />
+                  Cancelar
+                </button>
+              )}
+              <button
+                type="submit"
+                className="btn-primary w-full justify-center"
+                disabled={isSubmitting}
+                aria-busy={isSubmitting}
+              >
+                {isSubmitting ? (
+                  <LoaderCircle className="h-4 w-4 animate-spin" />
+                ) : isEditing ? (
+                  <Save className="h-4 w-4" />
+                ) : (
+                  <Plus className="h-4 w-4" />
+                )}
+                {isSubmitting
+                  ? isEditing
+                    ? "Salvando..."
+                    : "Criando login..."
+                  : isEditing
+                    ? "Salvar alterações"
+                    : "Criar acesso"}
+              </button>
+            </div>
           </form>
         </div>
 
@@ -324,6 +482,32 @@ export default function AccessManagement() {
                         </p>
                       </div>
                     </div>
+
+                    <div className="mt-3 flex gap-2 border-t border-slate-100 pt-3">
+                      <button
+                        type="button"
+                        onClick={() => startEdit(user)}
+                        className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                      >
+                        <Pencil className="h-4 w-4" />
+                        Editar
+                      </button>
+                      {currentUser?.id !== user.id && (
+                        <button
+                          type="button"
+                          onClick={() => handleDelete(user)}
+                          disabled={deletingUserId === user.id}
+                          className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-semibold text-rose-600 hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          {deletingUserId === user.id ? (
+                            <LoaderCircle className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Trash2 className="h-4 w-4" />
+                          )}
+                          Excluir
+                        </button>
+                      )}
+                    </div>
                   </article>
                 ))}
               </div>
@@ -337,6 +521,7 @@ export default function AccessManagement() {
                       <th className="px-4 py-3">Perfil</th>
                       <th className="px-4 py-3">Status</th>
                       <th className="px-4 py-3">Criado em</th>
+                      <th className="px-4 py-3 text-right">Ações</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
@@ -356,6 +541,39 @@ export default function AccessManagement() {
                           {user.createdAt
                             ? new Date(user.createdAt).toLocaleDateString("pt-BR")
                             : "Sem registro"}
+                        </td>
+                        <td className="px-4 py-4">
+                          <div className="flex items-center justify-end gap-2">
+                            <button
+                              type="button"
+                              onClick={() => startEdit(user)}
+                              title="Editar usuário"
+                              aria-label={`Editar ${user.name}`}
+                              className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900"
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </button>
+                            {currentUser?.id !== user.id ? (
+                              <button
+                                type="button"
+                                onClick={() => handleDelete(user)}
+                                disabled={deletingUserId === user.id}
+                                title="Excluir usuário"
+                                aria-label={`Excluir ${user.name}`}
+                                className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-rose-200 text-rose-600 transition-colors hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-60"
+                              >
+                                {deletingUserId === user.id ? (
+                                  <LoaderCircle className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  <Trash2 className="h-4 w-4" />
+                                )}
+                              </button>
+                            ) : (
+                              <span className="text-xs font-medium text-slate-400">
+                                Você
+                              </span>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     ))}

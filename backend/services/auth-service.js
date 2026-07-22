@@ -8,6 +8,12 @@ import { HttpError } from "../lib/http-error.js";
 export const userRoles = ["admin", "manager", "technician"];
 const LOGIN_ATTEMPT_WINDOW_MS = 15 * 60 * 1000;
 const MAX_LOGIN_ATTEMPTS_PER_USER = 5;
+const JWT_ALGORITHM = "HS256";
+
+// Hash "isca" usado para comparar a senha mesmo quando o usuário não existe.
+// Isso mantém o tempo de resposta constante e evita a enumeração de usuários
+// por análise de tempo (timing attack).
+const DUMMY_PASSWORD_HASH = bcrypt.hashSync("invalid-login-placeholder", 10);
 
 const assertSupportedRole = (user) => {
   if (!userRoles.includes(user.role)) {
@@ -122,6 +128,85 @@ export class AuthService {
     return toManagedUser(createdUser);
   }
 
+  async updateUser(id, changes, requestingUserId) {
+    const user = await this.userRepository.findById(id);
+
+    if (!user) {
+      throw new HttpError(404, "Usuário não encontrado.");
+    }
+
+    const fields = {};
+
+    if (changes.name !== undefined) {
+      fields.name = changes.name.trim();
+    }
+
+    if (changes.password !== undefined) {
+      fields.passwordHash = bcrypt.hashSync(changes.password, 10);
+    }
+
+    if (changes.role !== undefined) {
+      if (!userRoles.includes(changes.role)) {
+        throw new HttpError(400, "Perfil de acesso inválido.");
+      }
+      fields.role = changes.role;
+    }
+
+    if (changes.isActive !== undefined) {
+      fields.isActive = changes.isActive;
+    }
+
+    // Impede que o sistema fique sem nenhum administrador ativo.
+    const willLoseAdmin =
+      user.role === "admin" &&
+      user.isActive &&
+      ((fields.role !== undefined && fields.role !== "admin") ||
+        fields.isActive === false);
+
+    if (willLoseAdmin && (await this.userRepository.countActiveAdmins()) <= 1) {
+      throw new HttpError(
+        409,
+        "É necessário manter pelo menos um administrador ativo no sistema.",
+      );
+    }
+
+    if (
+      id === requestingUserId &&
+      fields.isActive === false
+    ) {
+      throw new HttpError(409, "Você não pode desativar o próprio usuário.");
+    }
+
+    const updatedUser = await this.userRepository.update(id, fields);
+    return toManagedUser(updatedUser);
+  }
+
+  async deleteUser(id, requestingUserId) {
+    const user = await this.userRepository.findById(id);
+
+    if (!user) {
+      throw new HttpError(404, "Usuário não encontrado.");
+    }
+
+    if (id === requestingUserId) {
+      throw new HttpError(409, "Você não pode excluir o próprio usuário.");
+    }
+
+    if (
+      user.role === "admin" &&
+      user.isActive &&
+      (await this.userRepository.countActiveAdmins()) <= 1
+    ) {
+      throw new HttpError(
+        409,
+        "É necessário manter pelo menos um administrador ativo no sistema.",
+      );
+    }
+
+    await this.userRepository.remove(id);
+    return toManagedUser(user);
+  }
+
   async login({ username, password }) {
     const normalizedUsername = normalizeUsername(username);
 
@@ -131,7 +216,14 @@ export class AuthService {
 
     const user = await this.userRepository.findByUsername(normalizedUsername);
 
-    if (!user || !bcrypt.compareSync(password, user.passwordHash)) {
+    // Sempre executa o compare (contra o hash real ou o de isca) para que o
+    // tempo de resposta não revele se o usuário existe.
+    const passwordMatches = bcrypt.compareSync(
+      password,
+      user?.passwordHash ?? DUMMY_PASSWORD_HASH,
+    );
+
+    if (!user || !passwordMatches) {
       this.registerFailedLogin(normalizedUsername);
       throw new HttpError(401, "Usuário ou senha inválidos.");
     }
@@ -160,6 +252,7 @@ export class AuthService {
       },
       env.jwtSecret,
       {
+        algorithm: JWT_ALGORITHM,
         expiresIn: env.jwtExpiresIn,
         issuer: "sst-backend",
         audience: "sst-frontend",
@@ -228,6 +321,7 @@ export class AuthService {
 
     const payload = assertJwtPayload(
       jwt.verify(token, env.jwtSecret, {
+        algorithms: [JWT_ALGORITHM],
         issuer: "sst-backend",
         audience: "sst-frontend",
       }),

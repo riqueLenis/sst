@@ -102,10 +102,17 @@ const imageDataUrl = (label) =>
     `${label} precisa ser uma imagem em data URL.`,
   );
 
-const passwordString = trimmedString("Senha", 120).min(
-  6,
-  "Senha deve ter no mínimo 6 caracteres.",
-);
+// Login: aceita qualquer senha não vazia (a força é validada só no cadastro,
+// para não bloquear credenciais legadas na hora de autenticar).
+const loginPasswordString = trimmedString("Senha", 120);
+
+// Cadastro/edição: exige senha forte.
+const passwordString = trimmedString("Senha", 120)
+  .min(8, "Senha deve ter no mínimo 8 caracteres.")
+  .refine(
+    (value) => /[A-Za-z]/.test(value) && /\d/.test(value),
+    "Senha deve conter letras e números.",
+  );
 const userRoleSchema = z.enum(["admin", "manager", "technician"], {
   errorMap: () => ({ message: "Perfil de acesso inválido." }),
 });
@@ -124,12 +131,43 @@ const addPpeDeliveryReplacementValidation = (schema) =>
     }
   });
 
+const optionalTextField = (label, max = 255) =>
+  z
+    .string()
+    .trim()
+    .max(max, `${label} deve ter no máximo ${max} caracteres.`)
+    .default("");
+
 const companySchema = z
   .object({
+    documentType: enumField(["CNPJ", "CPF"], "Tipo do documento").default(
+      "CNPJ",
+    ),
     name: trimmedString("Nome da empresa", 180),
-    cnpj: trimmedString("CNPJ", 30),
-    address: trimmedString("Endereço", 255),
-    contact: trimmedString("Contato", 180),
+    cnpj: trimmedString("CNPJ/CPF", 30),
+    razaoSocial: optionalTextField("Razão social", 180),
+    establishment: enumField(["matriz", "filial"], "Estabelecimento").default(
+      "matriz",
+    ),
+    riskLevel: optionalTextField("Grau de risco", 5),
+    enableMapping: booleanField("Habilitar mapeamento").default(true),
+    cnae: optionalTextField("CNAE", 200),
+    observations: optionalTextField("Observações", 2000),
+    tags: z.array(trimmedString("Tag", 40)).default([]),
+    hasContact: booleanField("Contato").default(true),
+    phone: optionalTextField("Telefone principal", 40),
+    otherPhones: optionalTextField("Outros telefones", 200),
+    email: optionalTextField("E-mail principal", 180),
+    cep: optionalTextField("CEP", 12),
+    city: optionalTextField("Cidade", 120),
+    logradouro: optionalTextField("Logradouro", 180),
+    addressNumber: optionalTextField("Número do endereço", 20),
+    neighborhood: optionalTextField("Bairro", 120),
+    complement: optionalTextField("Complemento", 120),
+    esocial: booleanField("eSocial").default(false),
+    // Campos derivados mantidos para compatibilidade com telas de listagem/PDF.
+    address: optionalTextField("Endereço", 255),
+    contact: optionalTextField("Contato", 180),
   })
   .strict();
 
@@ -321,7 +359,7 @@ export const authSchemas = {
   login: z
     .object({
       username: trimmedString("Usuário", 80),
-      password: passwordString,
+      password: loginPasswordString,
     })
     .strict(),
   createUser: z
@@ -331,5 +369,14 @@ export const authSchemas = {
       password: passwordString,
       role: userRoleSchema,
     })
+    .strict(),
+  updateUser: z
+    .object({
+      name: trimmedString("Nome do usuário", 180),
+      password: passwordString,
+      role: userRoleSchema,
+      isActive: booleanField("Situação do usuário"),
+    })
+    .partial()
     .strict(),
 };

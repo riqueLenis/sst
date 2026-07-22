@@ -10,9 +10,11 @@ import {
   CheckCircle2,
   Clock,
   LoaderCircle,
+  Pencil,
   ShieldAlert,
 } from "lucide-react";
 import { exportTableToPDF } from "../lib/pdfUtils";
+import type { SSTDocument } from "../types";
 
 export default function Programs() {
   const { documents, companies, addDocument, updateDocument, deleteDocument } =
@@ -20,6 +22,7 @@ export default function Programs() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   const initialFormState = {
     companyId: "",
@@ -36,6 +39,34 @@ export default function Programs() {
   };
   const [formData, setFormData] = useState(initialFormState);
 
+  const openNewModal = () => {
+    setEditingId(null);
+    setFormData(initialFormState);
+    setIsModalOpen(true);
+  };
+
+  const handleEdit = (doc: SSTDocument) => {
+    setEditingId(doc.id);
+    setFormData({
+      companyId: doc.companyId,
+      type: doc.type,
+      title: doc.title,
+      issueDate: doc.issueDate,
+      validUntil: doc.validUntil,
+      status: doc.status,
+      hasInsalubrity: doc.hasInsalubrity,
+      hasPericulosity: doc.hasPericulosity,
+      notes: doc.notes,
+    } as typeof initialFormState);
+    setIsModalOpen(true);
+  };
+
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setEditingId(null);
+    setFormData(initialFormState);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isSaving) {
@@ -43,9 +74,12 @@ export default function Programs() {
     }
     setIsSaving(true);
     try {
-      await addDocument(formData);
-      setIsModalOpen(false);
-      setFormData(initialFormState);
+      if (editingId) {
+        await updateDocument(editingId, formData);
+      } else {
+        await addDocument(formData);
+      }
+      closeModal();
     } finally {
       setIsSaving(false);
     }
@@ -153,13 +187,7 @@ export default function Programs() {
             Exportar Lista (PDF)
           </button>
           <button
-            onClick={() => {
-              setFormData({
-                ...initialFormState,
-                companyId: companies[0]?.id || "",
-              });
-              setIsModalOpen(true);
-            }}
+            onClick={openNewModal}
             className="inline-flex items-center justify-center rounded-xl text-sm font-semibold transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 disabled:pointer-events-none disabled:opacity-50 bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm shadow-indigo-200 h-10 px-4 py-2"
           >
             <Plus className="w-4 h-4 mr-2" />
@@ -338,6 +366,13 @@ export default function Programs() {
                           )}
                         </button>
                         <button
+                          onClick={() => handleEdit(doc)}
+                          className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                          title="Editar"
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </button>
+                        <button
                           onClick={() => handleDelete(doc.id)}
                           className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                           title="Excluir"
@@ -389,10 +424,10 @@ export default function Programs() {
           <div className="my-6 bg-white rounded-2xl shadow-xl w-full max-h-[calc(100vh-2rem)] max-w-md overflow-y-auto animate-in zoom-in-95 duration-200">
             <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center sticky top-0 bg-slate-50/90 backdrop-blur-sm z-10">
               <h3 className="text-lg font-bold text-slate-900">
-                Novo Programa / Laudo
+                {editingId ? "Editar Programa / Laudo" : "Novo Programa / Laudo"}
               </h3>
               <button
-                onClick={() => setIsModalOpen(false)}
+                onClick={closeModal}
                 className="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-100 transition-colors"
               >
                 <span className="sr-only">Fechar</span>
@@ -578,7 +613,7 @@ export default function Programs() {
               <div className="mt-8 flex flex-col-reverse gap-3 pt-4 border-t border-slate-100 sm:flex-row sm:justify-end">
                 <button
                   type="button"
-                  onClick={() => setIsModalOpen(false)}
+                  onClick={closeModal}
                   disabled={isSaving}
                   className="px-4 py-2 text-sm font-semibold text-slate-700 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all disabled:cursor-not-allowed disabled:opacity-60"
                 >

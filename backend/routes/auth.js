@@ -57,6 +57,46 @@ export const createAuthRouter = (authService) => {
     }),
   );
 
+  router.patch(
+    "/users/:id",
+    authenticate(authService),
+    authorize("admin"),
+    validateBody(authSchemas.updateUser, { requireAtLeastOne: true }),
+    handle(async (req, res) => {
+      const updatedUser = await authService.updateUser(
+        req.params.id,
+        req.validatedBody,
+        req.authUser.id,
+      );
+
+      res.json({
+        data: updatedUser,
+        meta: {
+          message: "Usuário atualizado com sucesso.",
+        },
+      });
+    }),
+  );
+
+  router.delete(
+    "/users/:id",
+    authenticate(authService),
+    authorize("admin"),
+    handle(async (req, res) => {
+      const removedUser = await authService.deleteUser(
+        req.params.id,
+        req.authUser.id,
+      );
+
+      res.json({
+        data: removedUser,
+        meta: {
+          message: "Usuário removido com sucesso.",
+        },
+      });
+    }),
+  );
+
   router.get(
     "/me",
     authenticate(authService),

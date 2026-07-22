@@ -13,6 +13,8 @@ import {
   CheckCircle2,
   Clock,
   LoaderCircle,
+  Pencil,
+  Trash2,
 } from "lucide-react";
 import { exportTableToPDF } from "../lib/pdfUtils";
 import type { Transaction } from "../types";
@@ -47,6 +49,7 @@ export default function Financial() {
   const [formData, setFormData] = useState<TransactionFormState>(
     initialFormState,
   );
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   // Metrics
   const totalIncome = transactions
@@ -63,6 +66,42 @@ export default function Financial() {
     .filter((t) => t.type === "expense" && t.status === "pending")
     .reduce((acc, t) => acc + t.amount, 0);
 
+  const openNewModal = () => {
+    setEditingId(null);
+    setFormData({
+      ...initialFormState,
+      companyId: companies[0]?.id || "",
+    });
+    setIsModalOpen(true);
+  };
+
+  const handleEdit = (transaction: Transaction) => {
+    setEditingId(transaction.id);
+    setFormData({
+      companyId: transaction.companyId,
+      type: transaction.type,
+      amount: transaction.amount,
+      date: transaction.date,
+      dueDate: transaction.dueDate,
+      description: transaction.description,
+      status: transaction.status,
+      category: transaction.category,
+    });
+    setIsModalOpen(true);
+  };
+
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setEditingId(null);
+    setFormData(initialFormState);
+  };
+
+  const handleDelete = (id: string) => {
+    if (window.confirm("Tem certeza que deseja excluir esta transação?")) {
+      deleteTransaction(id);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isSaving) {
@@ -70,9 +109,12 @@ export default function Financial() {
     }
     setIsSaving(true);
     try {
-      await addTransaction(formData);
-      setIsModalOpen(false);
-      setFormData(initialFormState);
+      if (editingId) {
+        await updateTransaction(editingId, formData);
+      } else {
+        await addTransaction(formData);
+      }
+      closeModal();
     } finally {
       setIsSaving(false);
     }
@@ -263,13 +305,7 @@ export default function Financial() {
         </div>
         <div className="flex items-center gap-3">
           <button
-            onClick={() => {
-              setFormData({
-                ...initialFormState,
-                companyId: companies[0]?.id || "",
-              });
-              setIsModalOpen(true);
-            }}
+            onClick={openNewModal}
             className="inline-flex items-center justify-center rounded-xl text-sm font-semibold transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 disabled:pointer-events-none disabled:opacity-50 bg-emerald-600 text-white hover:bg-emerald-700 shadow-sm shadow-emerald-200 h-10 px-4 py-2"
           >
             <Plus className="w-4 h-4 mr-2" />
@@ -472,25 +508,41 @@ export default function Financial() {
                           </span>
                         </td>
                         <td className="px-6 py-4 text-right">
-                          <button
-                            onClick={() => handleToggleStatus(t.id, t.status)}
-                            className={`p-2 rounded-lg transition-colors ${
-                              t.status === "paid"
-                                ? "text-slate-400 hover:text-orange-600 hover:bg-orange-50"
-                                : "text-slate-400 hover:text-emerald-600 hover:bg-emerald-50"
-                            }`}
-                            title={
-                              t.status === "paid"
-                                ? "Marcar como Pendente"
-                                : "Marcar como Pago"
-                            }
-                          >
-                            {t.status === "paid" ? (
-                              <Clock className="w-4 h-4" />
-                            ) : (
-                              <CheckCircle2 className="w-4 h-4" />
-                            )}
-                          </button>
+                          <div className="flex items-center justify-end gap-1">
+                            <button
+                              onClick={() => handleToggleStatus(t.id, t.status)}
+                              className={`p-2 rounded-lg transition-colors ${
+                                t.status === "paid"
+                                  ? "text-slate-400 hover:text-orange-600 hover:bg-orange-50"
+                                  : "text-slate-400 hover:text-emerald-600 hover:bg-emerald-50"
+                              }`}
+                              title={
+                                t.status === "paid"
+                                  ? "Marcar como Pendente"
+                                  : "Marcar como Pago"
+                              }
+                            >
+                              {t.status === "paid" ? (
+                                <Clock className="w-4 h-4" />
+                              ) : (
+                                <CheckCircle2 className="w-4 h-4" />
+                              )}
+                            </button>
+                            <button
+                              onClick={() => handleEdit(t)}
+                              className="p-2 rounded-lg text-slate-400 transition-colors hover:text-blue-600 hover:bg-blue-50"
+                              title="Editar transação"
+                            >
+                              <Pencil className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => handleDelete(t.id)}
+                              className="p-2 rounded-lg text-slate-400 transition-colors hover:text-rose-600 hover:bg-rose-50"
+                              title="Excluir transação"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     );
@@ -643,10 +695,10 @@ export default function Financial() {
           <div className="my-6 bg-white rounded-2xl shadow-xl w-full max-h-[calc(100vh-2rem)] max-w-md overflow-y-auto animate-in zoom-in-95 duration-200">
             <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center sticky top-0 bg-slate-50/90 backdrop-blur-sm z-10">
               <h3 className="text-lg font-bold text-slate-900">
-                Nova Transação
+                {editingId ? "Editar Transação" : "Nova Transação"}
               </h3>
               <button
-                onClick={() => setIsModalOpen(false)}
+                onClick={closeModal}
                 className="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-100 transition-colors"
               >
                 <span className="sr-only">Fechar</span>
@@ -817,7 +869,7 @@ export default function Financial() {
               <div className="mt-8 flex flex-col-reverse gap-3 pt-4 border-t border-slate-100 sm:flex-row sm:justify-end">
                 <button
                   type="button"
-                  onClick={() => setIsModalOpen(false)}
+                  onClick={closeModal}
                   disabled={isSaving}
                   className="px-4 py-2 text-sm font-semibold text-slate-700 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all disabled:cursor-not-allowed disabled:opacity-60"
                 >

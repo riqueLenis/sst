@@ -13,8 +13,11 @@ import {
   HeartPulse,
   CalendarDays,
   LoaderCircle,
+  Pencil,
+  Trash2,
 } from "lucide-react";
 import { exportTableToPDF } from "../lib/pdfUtils";
+import type { ASO, Absence, MedicalReferral } from "../types";
 
 export default function OccupationalHealth() {
   const {
@@ -40,6 +43,7 @@ export default function OccupationalHealth() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   // Form States
   const asoInitialState = {
@@ -78,6 +82,7 @@ export default function OccupationalHealth() {
   const [referralData, setReferralData] = useState(referralInitialState);
 
   const handleOpenModal = () => {
+    setEditingId(null);
     if (activeTab === "asos")
       setAsoData({ ...asoInitialState, employeeId: employees[0]?.id || "" });
     if (activeTab === "absences")
@@ -93,6 +98,70 @@ export default function OccupationalHealth() {
     setIsModalOpen(true);
   };
 
+  const handleEditASO = (aso: ASO) => {
+    setEditingId(aso.id);
+    setAsoData({
+      employeeId: aso.employeeId,
+      type: aso.type,
+      date: aso.date,
+      validUntil: aso.validUntil,
+      result: aso.result,
+      doctor: aso.doctor,
+      crm: aso.crm,
+      notes: aso.notes,
+    } as typeof asoInitialState);
+    setIsModalOpen(true);
+  };
+
+  const handleEditAbsence = (absence: Absence) => {
+    setEditingId(absence.id);
+    setAbsenceData({
+      employeeId: absence.employeeId,
+      startDate: absence.startDate,
+      endDate: absence.endDate,
+      reason: absence.reason,
+      cid: absence.cid,
+      doctor: absence.doctor,
+      status: absence.status,
+    } as typeof absenceInitialState);
+    setIsModalOpen(true);
+  };
+
+  const handleEditReferral = (referral: MedicalReferral) => {
+    setEditingId(referral.id);
+    setReferralData({
+      employeeId: referral.employeeId,
+      date: referral.date,
+      specialty: referral.specialty,
+      reason: referral.reason,
+      status: referral.status,
+    } as typeof referralInitialState);
+    setIsModalOpen(true);
+  };
+
+  const handleDeleteASO = (id: string) => {
+    if (window.confirm("Tem certeza que deseja excluir este ASO?")) {
+      deleteASO(id);
+    }
+  };
+
+  const handleDeleteAbsence = (id: string) => {
+    if (window.confirm("Tem certeza que deseja excluir este afastamento?")) {
+      deleteAbsence(id);
+    }
+  };
+
+  const handleDeleteReferral = (id: string) => {
+    if (window.confirm("Tem certeza que deseja excluir este encaminhamento?")) {
+      deleteReferral(id);
+    }
+  };
+
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setEditingId(null);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isSaving) {
@@ -101,16 +170,28 @@ export default function OccupationalHealth() {
     setIsSaving(true);
     try {
       if (activeTab === "asos") {
-        await addASO(asoData);
+        if (editingId) {
+          await updateASO(editingId, asoData);
+        } else {
+          await addASO(asoData);
+        }
         setAsoData(asoInitialState);
       } else if (activeTab === "absences") {
-        await addAbsence(absenceData);
+        if (editingId) {
+          await updateAbsence(editingId, absenceData);
+        } else {
+          await addAbsence(absenceData);
+        }
         setAbsenceData(absenceInitialState);
       } else if (activeTab === "referrals") {
-        await addReferral(referralData);
+        if (editingId) {
+          await updateReferral(editingId, referralData);
+        } else {
+          await addReferral(referralData);
+        }
         setReferralData(referralInitialState);
       }
-      setIsModalOpen(false);
+      closeModal();
     } finally {
       setIsSaving(false);
     }
@@ -434,24 +515,22 @@ export default function OccupationalHealth() {
                           <p className="text-xs text-slate-500">CRM: {a.crm}</p>
                         </td>
                         <td className="px-6 py-4 text-right">
-                          <button
-                            onClick={() => deleteASO(a.id)}
-                            className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                          >
-                            <svg
-                              className="w-4 h-4"
-                              fill="none"
-                              viewBox="0 0 24 24"
-                              stroke="currentColor"
+                          <div className="flex items-center justify-end gap-2">
+                            <button
+                              onClick={() => handleEditASO(a)}
+                              className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
+                              title="Editar ASO"
                             >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth="2"
-                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                              />
-                            </svg>
-                          </button>
+                              <Pencil className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteASO(a.id)}
+                              className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                              title="Excluir ASO"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     );
@@ -584,22 +663,18 @@ export default function OccupationalHealth() {
                               )}
                             </button>
                             <button
-                              onClick={() => deleteAbsence(a.id)}
-                              className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                              onClick={() => handleEditAbsence(a)}
+                              className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
+                              title="Editar afastamento"
                             >
-                              <svg
-                                className="w-4 h-4"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth="2"
-                                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                                />
-                              </svg>
+                              <Pencil className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteAbsence(a.id)}
+                              className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                              title="Excluir afastamento"
+                            >
+                              <Trash2 className="w-4 h-4" />
                             </button>
                           </div>
                         </td>
@@ -718,22 +793,18 @@ export default function OccupationalHealth() {
                               )}
                             </button>
                             <button
-                              onClick={() => deleteReferral(r.id)}
-                              className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                              onClick={() => handleEditReferral(r)}
+                              className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
+                              title="Editar encaminhamento"
                             >
-                              <svg
-                                className="w-4 h-4"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth="2"
-                                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                                />
-                              </svg>
+                              <Pencil className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteReferral(r.id)}
+                              className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                              title="Excluir encaminhamento"
+                            >
+                              <Trash2 className="w-4 h-4" />
                             </button>
                           </div>
                         </td>
@@ -764,13 +835,19 @@ export default function OccupationalHealth() {
             <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center sticky top-0 bg-slate-50/90 backdrop-blur-sm z-10">
               <h3 className="text-lg font-bold text-slate-900">
                 {activeTab === "asos"
-                  ? "Novo ASO"
+                  ? editingId
+                    ? "Editar ASO"
+                    : "Novo ASO"
                   : activeTab === "absences"
-                    ? "Novo Afastamento"
-                    : "Novo Encaminhamento"}
+                    ? editingId
+                      ? "Editar Afastamento"
+                      : "Novo Afastamento"
+                    : editingId
+                      ? "Editar Encaminhamento"
+                      : "Novo Encaminhamento"}
               </h3>
               <button
-                onClick={() => setIsModalOpen(false)}
+                onClick={closeModal}
                 className="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-100 transition-colors"
               >
                 <span className="sr-only">Fechar</span>
@@ -1099,7 +1176,7 @@ export default function OccupationalHealth() {
               <div className="mt-8 flex flex-col-reverse gap-3 pt-4 border-t border-slate-100 sm:flex-row sm:justify-end">
                 <button
                   type="button"
-                  onClick={() => setIsModalOpen(false)}
+                  onClick={closeModal}
                   disabled={isSaving}
                   className="px-4 py-2 text-sm font-semibold text-slate-700 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-rose-500 transition-all disabled:cursor-not-allowed disabled:opacity-60"
                 >

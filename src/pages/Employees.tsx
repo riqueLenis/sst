@@ -12,6 +12,7 @@ import {
 import { useAppContext } from "../store/AppContext";
 import { exportTableToPDF } from "../lib/pdfUtils";
 import { Button } from "../components/Button";
+import { formatCPF } from "../lib/masks";
 import type { Employee } from "../types";
 
 type EmployeeFormState = Omit<Employee, "id">;
@@ -43,10 +44,13 @@ export default function Employees() {
   const [formData, setFormData] = useState<EmployeeFormState>(initialFormState);
   const [isSaving, setIsSaving] = useState(false);
 
+  const searchDigits = searchTerm.replace(/\D/g, "");
   const filteredEmployees = employees.filter(
     (employee) =>
       employee.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      employee.cpf.includes(searchTerm),
+      employee.cpf.includes(searchTerm) ||
+      (searchDigits.length > 0 &&
+        employee.cpf.replace(/\D/g, "").includes(searchDigits)),
   );
   const activeEmployees = employees.filter(
     (employee) => employee.status === "active",
@@ -499,10 +503,14 @@ export default function Employees() {
                   </label>
                   <input
                     type="text"
+                    inputMode="numeric"
                     required
                     value={formData.cpf}
                     onChange={(event) =>
-                      setFormData({ ...formData, cpf: event.target.value })
+                      setFormData({
+                        ...formData,
+                        cpf: formatCPF(event.target.value),
+                      })
                     }
                     className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm"
                     placeholder="000.000.000-00"

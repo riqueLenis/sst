@@ -96,6 +96,55 @@ export class UserRepository {
     return this.findById(user.id);
   }
 
+  async update(id, fields) {
+    const columnByField = {
+      name: "name",
+      role: "role",
+      passwordHash: "password_hash",
+      isActive: "is_active",
+    };
+
+    const assignments = [];
+    const values = [];
+
+    for (const [field, column] of Object.entries(columnByField)) {
+      if (fields[field] === undefined) {
+        continue;
+      }
+
+      assignments.push(`${column} = ?`);
+      values.push(
+        field === "isActive" ? (fields.isActive ? 1 : 0) : fields[field],
+      );
+    }
+
+    if (assignments.length === 0) {
+      return this.findById(id);
+    }
+
+    assignments.push("updated_at = ?");
+    values.push(new Date());
+    values.push(id);
+
+    await this.db.query(
+      `UPDATE users SET ${assignments.join(", ")} WHERE id = ?`,
+      values,
+    );
+
+    return this.findById(id);
+  }
+
+  async remove(id) {
+    await this.db.query("DELETE FROM users WHERE id = ?", [id]);
+  }
+
+  async countActiveAdmins() {
+    const [rows] = await this.db.query(
+      "SELECT COUNT(*) AS total FROM users WHERE role = 'admin' AND is_active = 1",
+    );
+    return rows[0]?.total ?? 0;
+  }
+
   async deleteByRoles(roles) {
     if (!Array.isArray(roles) || roles.length === 0) {
       return;

@@ -10,26 +10,100 @@ import {
 import { useAppContext } from "../store/AppContext";
 import { exportTableToPDF } from "../lib/pdfUtils";
 import { Button } from "../components/Button";
+import {
+  formatCEP,
+  formatDocument,
+  formatPhone,
+  formatPhoneList,
+} from "../lib/masks";
 import type { Company } from "../types";
+
+type CompanyFormState = Omit<Company, "id">;
+
+const initialFormState: CompanyFormState = {
+  documentType: "CNPJ",
+  name: "",
+  cnpj: "",
+  razaoSocial: "",
+  establishment: "matriz",
+  riskLevel: "2",
+  enableMapping: true,
+  cnae: "",
+  observations: "",
+  tags: [],
+  hasContact: true,
+  phone: "",
+  otherPhones: "",
+  email: "",
+  cep: "",
+  city: "",
+  logradouro: "",
+  addressNumber: "",
+  neighborhood: "",
+  complement: "",
+  esocial: false,
+  address: "",
+  contact: "",
+};
+
+const composeAddress = (form: CompanyFormState): string => {
+  const street = [form.logradouro, form.addressNumber]
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .join(", ");
+
+  return [street, form.neighborhood.trim(), form.city.trim()]
+    .filter(Boolean)
+    .join(" - ");
+};
+
+const fieldClass =
+  "w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm focus:outline-none focus:border-teal-300 focus:ring-2 focus:ring-teal-100";
+const labelClass =
+  "mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500";
 
 export default function Companies() {
   const { companies, addCompany, updateCompany, deleteCompany } =
     useAppContext();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [formData, setFormData] = useState({
-    name: "",
-    cnpj: "",
-    address: "",
-    contact: "",
-  });
+  const [formData, setFormData] = useState<CompanyFormState>(initialFormState);
+  const [tagInput, setTagInput] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [isSaving, setIsSaving] = useState(false);
 
+  const updateField = <K extends keyof CompanyFormState>(
+    field: K,
+    value: CompanyFormState[K],
+  ) => {
+    setFormData((previous) => ({ ...previous, [field]: value }));
+  };
+
+  const addTag = () => {
+    const value = tagInput.trim();
+    if (!value) {
+      return;
+    }
+    if (!formData.tags.includes(value)) {
+      updateField("tags", [...formData.tags, value]);
+    }
+    setTagInput("");
+  };
+
+  const removeTag = (tag: string) => {
+    updateField(
+      "tags",
+      formData.tags.filter((item) => item !== tag),
+    );
+  };
+
+  const searchDigits = searchTerm.replace(/\D/g, "");
   const filteredCompanies = companies.filter(
     (company) =>
       company.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      company.cnpj.includes(searchTerm),
+      company.cnpj.includes(searchTerm) ||
+      (searchDigits.length > 0 &&
+        company.cnpj.replace(/\D/g, "").includes(searchDigits)),
   );
   const companiesWithContact = companies.filter(
     (company) => company.contact.trim().length > 0,
@@ -45,15 +119,22 @@ export default function Companies() {
     setIsSaving(true);
 
     try {
+      const payload: CompanyFormState = {
+        ...formData,
+        address: composeAddress(formData),
+        contact: formData.email.trim() || formData.phone.trim(),
+      };
+
       if (editingId) {
-        await updateCompany(editingId, formData);
+        await updateCompany(editingId, payload);
       } else {
-        await addCompany(formData);
+        await addCompany(payload);
       }
 
       setIsModalOpen(false);
       setEditingId(null);
-      setFormData({ name: "", cnpj: "", address: "", contact: "" });
+      setFormData(initialFormState);
+      setTagInput("");
     } finally {
       setIsSaving(false);
     }
@@ -61,11 +142,31 @@ export default function Companies() {
 
   const handleEdit = (company: Company) => {
     setFormData({
-      name: company.name,
-      cnpj: company.cnpj,
-      address: company.address,
-      contact: company.contact,
+      documentType: company.documentType ?? "CNPJ",
+      name: company.name ?? "",
+      cnpj: company.cnpj ?? "",
+      razaoSocial: company.razaoSocial ?? "",
+      establishment: company.establishment ?? "matriz",
+      riskLevel: company.riskLevel ?? "",
+      enableMapping: company.enableMapping ?? true,
+      cnae: company.cnae ?? "",
+      observations: company.observations ?? "",
+      tags: company.tags ?? [],
+      hasContact: company.hasContact ?? true,
+      phone: company.phone ?? "",
+      otherPhones: company.otherPhones ?? "",
+      email: company.email ?? "",
+      cep: company.cep ?? "",
+      city: company.city ?? "",
+      logradouro: company.logradouro ?? "",
+      addressNumber: company.addressNumber ?? "",
+      neighborhood: company.neighborhood ?? "",
+      complement: company.complement ?? "",
+      esocial: company.esocial ?? false,
+      address: company.address ?? "",
+      contact: company.contact ?? "",
     });
+    setTagInput("");
     setEditingId(company.id);
     setIsModalOpen(true);
   };
@@ -100,7 +201,8 @@ export default function Companies() {
 
   const resetModal = () => {
     setEditingId(null);
-    setFormData({ name: "", cnpj: "", address: "", contact: "" });
+    setFormData(initialFormState);
+    setTagInput("");
     setIsModalOpen(true);
   };
 
@@ -346,7 +448,7 @@ export default function Companies() {
 
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-slate-900/55 p-4 backdrop-blur-md">
-          <div className="my-6 w-full max-h-[calc(100vh-2rem)] max-w-lg overflow-y-auto rounded-[1.75rem] border border-white/75 bg-white/95 shadow-2xl shadow-slate-900/25">
+          <div className="my-6 w-full max-h-[calc(100vh-2rem)] max-w-3xl overflow-y-auto rounded-[1.75rem] border border-white/75 bg-white/95 shadow-2xl shadow-slate-900/25">
             <div className="flex items-center justify-between border-b border-slate-200/70 px-6 py-5">
               <div>
                 <p className="eyebrow">Cadastro</p>
@@ -365,69 +467,372 @@ export default function Companies() {
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-4 p-6">
+            <form onSubmit={handleSubmit} className="space-y-5 p-6">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                <div>
+                  <label className={labelClass}>★ Tipo do documento</label>
+                  <select
+                    value={formData.documentType}
+                    onChange={(event) => {
+                      const documentType = event.target.value as
+                        | "CNPJ"
+                        | "CPF";
+                      setFormData((previous) => ({
+                        ...previous,
+                        documentType,
+                        cnpj: formatDocument(previous.cnpj, documentType),
+                      }));
+                    }}
+                    className={fieldClass}
+                  >
+                    <option value="CNPJ">CNPJ</option>
+                    <option value="CPF">CPF</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className={labelClass}>
+                    ★ {formData.documentType}
+                  </label>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    required
+                    value={formData.cnpj}
+                    onChange={(event) =>
+                      updateField(
+                        "cnpj",
+                        formatDocument(
+                          event.target.value,
+                          formData.documentType,
+                        ),
+                      )
+                    }
+                    className={fieldClass}
+                    placeholder={
+                      formData.documentType === "CPF"
+                        ? "000.000.000-00"
+                        : "00.000.000/0000-00"
+                    }
+                  />
+                </div>
+
+                <div>
+                  <label className={labelClass}>Estabelecimento</label>
+                  <select
+                    value={formData.establishment}
+                    onChange={(event) =>
+                      updateField(
+                        "establishment",
+                        event.target.value as "matriz" | "filial",
+                      )
+                    }
+                    className={fieldClass}
+                  >
+                    <option value="matriz">Matriz</option>
+                    <option value="filial">Filial</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className={labelClass}>Grau de risco</label>
+                  <select
+                    value={formData.riskLevel}
+                    onChange={(event) =>
+                      updateField("riskLevel", event.target.value)
+                    }
+                    className={fieldClass}
+                  >
+                    <option value="">-</option>
+                    <option value="1">1</option>
+                    <option value="2">2</option>
+                    <option value="3">3</option>
+                    <option value="4">4</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                  <label className={labelClass}>★ Nome</label>
+                  <input
+                    type="text"
+                    required
+                    value={formData.name}
+                    onChange={(event) =>
+                      updateField("name", event.target.value)
+                    }
+                    className={fieldClass}
+                    placeholder="Nome fantasia"
+                  />
+                </div>
+
+                <div>
+                  <label className={labelClass}>Razão social</label>
+                  <input
+                    type="text"
+                    value={formData.razaoSocial}
+                    onChange={(event) =>
+                      updateField("razaoSocial", event.target.value)
+                    }
+                    className={fieldClass}
+                    placeholder="Razão social"
+                  />
+                </div>
+              </div>
+
               <div>
-                <label className="mb-1.5 block text-sm font-semibold text-slate-700">
-                  Nome / Razão Social
-                </label>
+                <label className={labelClass}>CNAE</label>
                 <input
                   type="text"
-                  required
-                  value={formData.name}
-                  onChange={(event) =>
-                    setFormData({ ...formData, name: event.target.value })
-                  }
-                  className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm"
-                  placeholder="Digite a razão social"
+                  value={formData.cnae}
+                  onChange={(event) => updateField("cnae", event.target.value)}
+                  className={fieldClass}
+                  placeholder="(0000-0/00) Descrição da atividade"
                 />
               </div>
 
               <div>
-                <label className="mb-1.5 block text-sm font-semibold text-slate-700">
-                  CNPJ
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={formData.cnpj}
+                <label className={labelClass}>Observações</label>
+                <textarea
+                  rows={3}
+                  value={formData.observations}
                   onChange={(event) =>
-                    setFormData({ ...formData, cnpj: event.target.value })
+                    updateField("observations", event.target.value)
                   }
-                  className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm"
-                  placeholder="00.000.000/0000-00"
+                  className={`${fieldClass} resize-none`}
+                  placeholder="Anotações adicionais..."
                 />
               </div>
 
               <div>
-                <label className="mb-1.5 block text-sm font-semibold text-slate-700">
-                  Endereço
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={formData.address}
-                  onChange={(event) =>
-                    setFormData({ ...formData, address: event.target.value })
-                  }
-                  className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm"
-                  placeholder="Rua, número, bairro, cidade - UF"
-                />
+                <label className={labelClass}>Tags</label>
+                <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-slate-200 p-2">
+                  {formData.tags.map((tag) => (
+                    <span
+                      key={tag}
+                      className="inline-flex items-center gap-1 rounded-lg bg-slate-800 px-2.5 py-1 text-xs font-semibold text-white"
+                    >
+                      {tag}
+                      <button
+                        type="button"
+                        onClick={() => removeTag(tag)}
+                        className="text-white/70 hover:text-white"
+                        aria-label={`Remover tag ${tag}`}
+                      >
+                        ×
+                      </button>
+                    </span>
+                  ))}
+                  <input
+                    type="text"
+                    value={tagInput}
+                    onChange={(event) => setTagInput(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" || event.key === ",") {
+                        event.preventDefault();
+                        addTag();
+                      }
+                    }}
+                    onBlur={addTag}
+                    className="min-w-[8rem] flex-1 border-0 bg-transparent px-2 py-1 text-sm outline-none"
+                    placeholder="Adicionar tag e pressionar Enter"
+                  />
+                </div>
               </div>
 
-              <div>
-                <label className="mb-1.5 block text-sm font-semibold text-slate-700">
-                  Contato
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={formData.contact}
-                  onChange={(event) =>
-                    setFormData({ ...formData, contact: event.target.value })
-                  }
-                  className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm"
-                  placeholder="contato@empresa.com"
-                />
+              <div className="rounded-2xl border border-slate-200/70 p-4">
+                <button
+                  type="button"
+                  onClick={() => updateField("hasContact", !formData.hasContact)}
+                  className="flex items-center gap-3"
+                  aria-pressed={formData.hasContact}
+                >
+                  <span
+                    className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${
+                      formData.hasContact ? "bg-teal-500" : "bg-slate-300"
+                    }`}
+                  >
+                    <span
+                      className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${
+                        formData.hasContact ? "translate-x-5" : "translate-x-1"
+                      }`}
+                    />
+                  </span>
+                  <span className="text-xs font-semibold uppercase tracking-wide text-slate-600">
+                    Contato
+                  </span>
+                </button>
+
+                {formData.hasContact && (
+                  <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
+                    <div>
+                      <label className={labelClass}>Telefone principal</label>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        value={formData.phone}
+                        onChange={(event) =>
+                          updateField("phone", formatPhone(event.target.value))
+                        }
+                        className={fieldClass}
+                        placeholder="(00) 00000-0000"
+                      />
+                    </div>
+                    <div>
+                      <label className={labelClass}>Outros telefones</label>
+                      <input
+                        type="text"
+                        value={formData.otherPhones}
+                        onChange={(event) =>
+                          updateField("otherPhones", event.target.value)
+                        }
+                        onBlur={(event) =>
+                          updateField(
+                            "otherPhones",
+                            formatPhoneList(event.target.value),
+                          )
+                        }
+                        className={fieldClass}
+                        placeholder="Separados por vírgula"
+                      />
+                    </div>
+                    <div>
+                      <label className={labelClass}>E-mail principal</label>
+                      <input
+                        type="email"
+                        value={formData.email}
+                        onChange={(event) =>
+                          updateField("email", event.target.value)
+                        }
+                        className={fieldClass}
+                        placeholder="contato@empresa.com"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                  <label className={labelClass}>CEP</label>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    value={formData.cep}
+                    onChange={(event) =>
+                      updateField("cep", formatCEP(event.target.value))
+                    }
+                    className={fieldClass}
+                    placeholder="00000-000"
+                  />
+                </div>
+                <div>
+                  <label className={labelClass}>Cidade</label>
+                  <input
+                    type="text"
+                    value={formData.city}
+                    onChange={(event) =>
+                      updateField("city", event.target.value)
+                    }
+                    className={fieldClass}
+                    placeholder="Cidade (UF)"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-[2fr_1fr]">
+                <div>
+                  <label className={labelClass}>Logradouro</label>
+                  <input
+                    type="text"
+                    value={formData.logradouro}
+                    onChange={(event) =>
+                      updateField("logradouro", event.target.value)
+                    }
+                    className={fieldClass}
+                    placeholder="Avenida, rua..."
+                  />
+                </div>
+                <div>
+                  <label className={labelClass}>Nº endereço</label>
+                  <input
+                    type="text"
+                    value={formData.addressNumber}
+                    onChange={(event) =>
+                      updateField("addressNumber", event.target.value)
+                    }
+                    className={fieldClass}
+                    placeholder="Número"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                  <label className={labelClass}>Bairro</label>
+                  <input
+                    type="text"
+                    value={formData.neighborhood}
+                    onChange={(event) =>
+                      updateField("neighborhood", event.target.value)
+                    }
+                    className={fieldClass}
+                    placeholder="Bairro"
+                  />
+                </div>
+                <div>
+                  <label className={labelClass}>Complemento</label>
+                  <input
+                    type="text"
+                    value={formData.complement}
+                    onChange={(event) =>
+                      updateField("complement", event.target.value)
+                    }
+                    className={fieldClass}
+                    placeholder="Complemento"
+                  />
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-slate-200/70 p-4">
+                <button
+                  type="button"
+                  onClick={() => updateField("esocial", !formData.esocial)}
+                  className="flex items-center gap-3"
+                  aria-pressed={formData.esocial}
+                >
+                  <span
+                    className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${
+                      formData.esocial ? "bg-teal-500" : "bg-slate-300"
+                    }`}
+                  >
+                    <span
+                      className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${
+                        formData.esocial ? "translate-x-5" : "translate-x-1"
+                      }`}
+                    />
+                  </span>
+                  <span className="text-xs font-semibold uppercase tracking-wide text-slate-600">
+                    eSocial
+                  </span>
+                </button>
+
+                <div className="flex items-center gap-3">
+                  <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    Habilitar mapeamento?
+                  </span>
+                  <select
+                    value={formData.enableMapping ? "sim" : "nao"}
+                    onChange={(event) =>
+                      updateField("enableMapping", event.target.value === "sim")
+                    }
+                    className="rounded-2xl border border-slate-200 px-3 py-2 text-sm"
+                  >
+                    <option value="sim">Sim</option>
+                    <option value="nao">Não</option>
+                  </select>
+                </div>
               </div>
 
               <div className="flex flex-col gap-3 border-t border-slate-200/70 pt-5 sm:flex-row sm:justify-end">

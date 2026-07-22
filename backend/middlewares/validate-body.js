@@ -8,17 +8,23 @@ export const validateBody = (schema, options = {}) => {
 
   return (req, _res, next) => {
     try {
-      const parsedBody = schema.parse(req.body ?? {});
+      let parsedBody = schema.parse(req.body ?? {});
 
-      if (
-        requireAtLeastOne &&
-        isPlainObject(parsedBody) &&
-        Object.keys(parsedBody).length === 0
-      ) {
-        throw new HttpError(
-          400,
-          "Envie ao menos um campo para atualização do recurso.",
+      // Em atualizações parciais (PATCH), o zod injeta os valores `.default()`
+      // dos campos ausentes. Isso sobrescreveria dados existentes com valores
+      // padrão. Para evitar, mantemos apenas os campos realmente enviados.
+      if (requireAtLeastOne && isPlainObject(parsedBody)) {
+        const sentKeys = isPlainObject(req.body) ? Object.keys(req.body) : [];
+        parsedBody = Object.fromEntries(
+          Object.entries(parsedBody).filter(([key]) => sentKeys.includes(key)),
         );
+
+        if (Object.keys(parsedBody).length === 0) {
+          throw new HttpError(
+            400,
+            "Envie ao menos um campo para atualização do recurso.",
+          );
+        }
       }
 
       req.validatedBody = parsedBody;

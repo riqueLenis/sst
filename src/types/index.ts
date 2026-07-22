@@ -1,7 +1,27 @@
 export interface Company {
   id: string;
+  documentType: "CNPJ" | "CPF";
   name: string;
   cnpj: string;
+  razaoSocial: string;
+  establishment: "matriz" | "filial";
+  riskLevel: string;
+  enableMapping: boolean;
+  cnae: string;
+  observations: string;
+  tags: string[];
+  hasContact: boolean;
+  phone: string;
+  otherPhones: string;
+  email: string;
+  cep: string;
+  city: string;
+  logradouro: string;
+  addressNumber: string;
+  neighborhood: string;
+  complement: string;
+  esocial: boolean;
+  // Campos derivados mantidos para compatibilidade (listagem, PDF, etc.).
   address: string;
   contact: string;
 }

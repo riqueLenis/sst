@@ -124,8 +124,18 @@ export const createApp = async () => {
 
   app.use(
     helmet({
-      contentSecurityPolicy: false,
-      crossOriginResourcePolicy: false,
+      // A API responde apenas JSON; uma CSP mínima bloqueia qualquer tentativa
+      // de renderizar/injetar recursos a partir das respostas do backend.
+      contentSecurityPolicy: {
+        useDefaults: false,
+        directives: {
+          "default-src": ["'none'"],
+          "frame-ancestors": ["'none'"],
+          "base-uri": ["'none'"],
+          "form-action": ["'none'"],
+        },
+      },
+      crossOriginResourcePolicy: { policy: "same-site" },
       frameguard: { action: "deny" },
       hsts:
         env.nodeEnv === "production"
@@ -170,6 +180,21 @@ export const createApp = async () => {
     },
   });
 
+  // Limita a criação/edição/remoção de usuários (ações administrativas raras)
+  // para conter abuso, mesmo com um token de admin válido comprometido.
+  const authUsersWriteLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 40,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: {
+      error: {
+        message:
+          "Muitas operações de usuários em sequência. Tente novamente mais tarde.",
+      },
+    },
+  });
+
   app.get("/health", (req, res) => {
     res.json({
       status: "ok",
@@ -195,6 +220,15 @@ export const createApp = async () => {
 
   app.use("/api/auth", setSensitiveResponseHeaders);
   app.use("/api/auth/login", loginLimiter);
+  app.use("/api/auth/users", (req, res, next) => {
+    // Apenas escritas passam pelo limitador; a listagem (GET) fica livre.
+    if (req.method === "GET") {
+      next();
+      return;
+    }
+
+    authUsersWriteLimiter(req, res, next);
+  });
   app.use("/api/auth", createAuthRouter(authService));
   app.use(
     "/api",
