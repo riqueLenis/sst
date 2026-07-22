@@ -40,6 +40,7 @@ interface AppState {
 
 interface AppContextType extends AppState {
   isLoading: boolean;
+  isMutating: boolean;
   error: string | null;
   refreshData: () => Promise<void>;
   addCompany: (company: Omit<Company, "id">) => Promise<void>;
@@ -134,6 +135,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
   const { logout, token, user } = useAuth();
   const [state, setState] = useState<AppState>(initialState);
   const [isLoading, setIsLoading] = useState(true);
+  const [isMutating, setIsMutating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const accessibleResourceEntries = useMemo(() => {
     const allowedKeys = user?.role
@@ -155,7 +157,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
     [logout],
   );
 
-  const refreshData = useCallback(async () => {
+  const refreshData = useCallback(async (options?: { silent?: boolean }) => {
+    const silent = options?.silent ?? false;
+
     if (!token) {
       setState(initialState);
       setIsLoading(false);
@@ -163,7 +167,12 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
       return;
     }
 
-    setIsLoading(true);
+    // O refresh silencioso mantém o conteúdo atual na tela (usado após salvar/
+    // excluir), evitando o "flash" do loader de página inteira a cada operação.
+    if (!silent) {
+      setIsLoading(true);
+    }
+
     setError(null);
 
     try {
@@ -208,9 +217,11 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
         return;
       }
 
+      setIsMutating(true);
+
       try {
         await operation();
-        await refreshData();
+        await refreshData({ silent: true });
       } catch (currentError) {
         if (handleUnauthorized(currentError)) {
           return;
@@ -218,6 +229,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
 
         console.error(currentError);
         window.alert(getApiErrorMessage(currentError));
+      } finally {
+        setIsMutating(false);
       }
     },
     [handleUnauthorized, logout, refreshData, token],
@@ -469,6 +482,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
     () => ({
       ...state,
       isLoading,
+      isMutating,
       error,
       refreshData,
       addCompany,
@@ -507,6 +521,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
     [
       state,
       isLoading,
+      isMutating,
       error,
       refreshData,
       addCompany,

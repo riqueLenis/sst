@@ -46,6 +46,8 @@ const parseBoolean = (value, fallback) => {
   return fallback;
 };
 
+const normalizeUsername = (value) => String(value ?? "").trim().toLowerCase();
+
 const normalizeOrigin = (value) =>
   value
     .trim()
@@ -110,8 +112,24 @@ export const env = {
   authCookieSameSite: readEnv("AUTH_COOKIE_SAME_SITE") ?? "strict",
   jwtSecret: readEnv("AUTH_JWT_SECRET", "JWT_SECRET") ?? "dev-only-change-me",
   jwtExpiresIn: readEnv("JWT_EXPIRES_IN") ?? "8h",
+  bootstrapAdmin: {
+    enabled: parseBoolean(readEnv("BOOTSTRAP_ADMIN_ENABLED"), true),
+    username: normalizeUsername(readEnv("BOOTSTRAP_ADMIN_USERNAME") ?? "admin"),
+    password: readEnv("BOOTSTRAP_ADMIN_PASSWORD") ?? "Exin@2025Admin",
+    name: readEnv("BOOTSTRAP_ADMIN_NAME") ?? "Administrador EXIN",
+  },
 };
 
 if (env.nodeEnv === "production" && env.jwtSecret === "dev-only-change-me") {
   throw new Error("Configure JWT_SECRET ou AUTH_JWT_SECRET antes de subir o backend em produção.");
+}
+
+if (
+  env.nodeEnv === "production" &&
+  env.bootstrapAdmin.enabled &&
+  env.bootstrapAdmin.password === "Exin@2025Admin"
+) {
+  console.warn(
+    "[sst-api] AVISO: BOOTSTRAP_ADMIN_PASSWORD está usando o valor padrão. Troque a senha do admin imediatamente após o primeiro login em produção.",
+  );
 }

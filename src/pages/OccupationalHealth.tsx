@@ -12,6 +12,7 @@ import {
   Activity,
   HeartPulse,
   CalendarDays,
+  LoaderCircle,
 } from "lucide-react";
 import { exportTableToPDF } from "../lib/pdfUtils";
 
@@ -38,6 +39,7 @@ export default function OccupationalHealth() {
   >("asos");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
 
   // Form States
   const asoInitialState = {
@@ -91,19 +93,27 @@ export default function OccupationalHealth() {
     setIsModalOpen(true);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (activeTab === "asos") {
-      addASO(asoData);
-      setAsoData(asoInitialState);
-    } else if (activeTab === "absences") {
-      addAbsence(absenceData);
-      setAbsenceData(absenceInitialState);
-    } else if (activeTab === "referrals") {
-      addReferral(referralData);
-      setReferralData(referralInitialState);
+    if (isSaving) {
+      return;
     }
-    setIsModalOpen(false);
+    setIsSaving(true);
+    try {
+      if (activeTab === "asos") {
+        await addASO(asoData);
+        setAsoData(asoInitialState);
+      } else if (activeTab === "absences") {
+        await addAbsence(absenceData);
+        setAbsenceData(absenceInitialState);
+      } else if (activeTab === "referrals") {
+        await addReferral(referralData);
+        setReferralData(referralInitialState);
+      }
+      setIsModalOpen(false);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   // --- ASO Tab ---
@@ -1090,15 +1100,20 @@ export default function OccupationalHealth() {
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 text-sm font-semibold text-slate-700 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-rose-500 transition-all"
+                  disabled={isSaving}
+                  className="px-4 py-2 text-sm font-semibold text-slate-700 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-rose-500 transition-all disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 text-sm font-semibold text-white bg-rose-600 border border-transparent rounded-xl hover:bg-rose-700 focus:outline-none focus:ring-2 focus:ring-rose-500 shadow-sm shadow-rose-200 transition-all"
+                  disabled={isSaving}
+                  className="inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-rose-600 border border-transparent rounded-xl hover:bg-rose-700 focus:outline-none focus:ring-2 focus:ring-rose-500 shadow-sm shadow-rose-200 transition-all disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  Salvar Registro
+                  {isSaving && (
+                    <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" />
+                  )}
+                  {isSaving ? "Salvando..." : "Salvar Registro"}
                 </button>
               </div>
             </form>

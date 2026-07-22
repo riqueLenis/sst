@@ -49,18 +49,44 @@ export class AuthService {
   async bootstrapUsers() {
     await this.userRepository.deleteByRoles(["viewer"]);
 
-    if (defaultUsers.length === 0) {
+    // Só semeia quando a base de usuários está vazia. Isso evita recriar contas
+    // já removidas e garante que uma instalação nova sempre tenha um admin válido
+    // (sem isso, ninguém consegue logar nem criar o primeiro acesso).
+    const existingUsers = await this.userRepository.count();
+
+    if (existingUsers > 0) {
       return;
     }
 
     const seedUsers = defaultUsers.map((user) => ({
       id: randomUUID(),
-      username: user.username,
+      username: normalizeUsername(user.username),
       name: user.name,
       role: user.role,
       passwordHash: bcrypt.hashSync(user.password, 10),
       isActive: true,
     }));
+
+    const hasAdminSeed = seedUsers.some((user) => user.role === "admin");
+
+    if (!hasAdminSeed && env.bootstrapAdmin.enabled) {
+      seedUsers.push({
+        id: randomUUID(),
+        username: env.bootstrapAdmin.username,
+        name: env.bootstrapAdmin.name,
+        role: "admin",
+        passwordHash: bcrypt.hashSync(env.bootstrapAdmin.password, 10),
+        isActive: true,
+      });
+
+      console.log(
+        `[sst-api] usuário administrador inicial criado (login: "${env.bootstrapAdmin.username}"). Altere a senha após o primeiro acesso.`,
+      );
+    }
+
+    if (seedUsers.length === 0) {
+      return;
+    }
 
     await this.userRepository.seed(seedUsers);
   }

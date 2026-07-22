@@ -5,6 +5,7 @@ import {
   Briefcase,
   Eye,
   HardHat,
+  LoaderCircle,
   Plus,
   ShieldCheck,
   FileText,
@@ -58,6 +59,7 @@ export default function PPEDeliveries() {
     string | null
   >(null);
   const [facePhotoError, setFacePhotoError] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
   const [facePhotoFeedback, setFacePhotoFeedback] = useState<string | null>(
     null,
   );
@@ -278,7 +280,7 @@ export default function PPEDeliveries() {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!canManageDeliveries) {
@@ -316,8 +318,18 @@ export default function PPEDeliveries() {
       return;
     }
 
-    addPPEDelivery(formData);
-    closeModal();
+    if (isSaving) {
+      return;
+    }
+
+    setIsSaving(true);
+
+    try {
+      await addPPEDelivery(formData);
+      closeModal();
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleReturn = (id: string) => {
@@ -1054,7 +1066,8 @@ export default function PPEDeliveries() {
                 <button
                   type="button"
                   onClick={closeModal}
-                  className="px-4 py-2 text-sm font-semibold text-slate-700 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                  disabled={isSaving}
+                  className="px-4 py-2 text-sm font-semibold text-slate-700 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   Cancelar
                 </button>
@@ -1064,11 +1077,15 @@ export default function PPEDeliveries() {
                     !formData.employeeId ||
                     !formData.ppeId ||
                     !formData.employeeSignature ||
-                    !formData.employeeFacePhoto
+                    !formData.employeeFacePhoto ||
+                    isSaving
                   }
-                  className="px-4 py-2 text-sm font-semibold text-white bg-blue-600 border border-transparent rounded-xl hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm shadow-blue-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-blue-600 border border-transparent rounded-xl hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm shadow-blue-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Registrar Entrega com Assinatura e Foto
+                  {isSaving && (
+                    <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" />
+                  )}
+                  {isSaving ? "Registrando..." : "Registrar Entrega com Assinatura e Foto"}
                 </button>
               </div>
             </form>

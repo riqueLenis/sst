@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { useAppContext } from "../store/AppContext";
 import { exportTableToPDF } from "../lib/pdfUtils";
+import { Button } from "../components/Button";
 import type { Employee } from "../types";
 
 type EmployeeFormState = Omit<Employee, "id">;
@@ -40,6 +41,7 @@ export default function Employees() {
   };
 
   const [formData, setFormData] = useState<EmployeeFormState>(initialFormState);
+  const [isSaving, setIsSaving] = useState(false);
 
   const filteredEmployees = employees.filter(
     (employee) =>
@@ -55,18 +57,28 @@ export default function Employees() {
   ).size;
   const canCreateEmployee = companies.length > 0 && roles.length > 0;
 
-  const handleSubmit = (event: React.FormEvent) => {
+  const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
 
-    if (editingId) {
-      updateEmployee(editingId, formData);
-    } else {
-      addEmployee(formData);
+    if (isSaving) {
+      return;
     }
 
-    setIsModalOpen(false);
-    setFormData(initialFormState);
-    setEditingId(null);
+    setIsSaving(true);
+
+    try {
+      if (editingId) {
+        await updateEmployee(editingId, formData);
+      } else {
+        await addEmployee(formData);
+      }
+
+      setIsModalOpen(false);
+      setFormData(initialFormState);
+      setEditingId(null);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleEdit = (employee: Employee) => {
@@ -149,12 +161,10 @@ export default function Employees() {
         <div className="hero-card">
           <span className="hero-accent">Gestão de pessoas</span>
           <h1 className="hero-title">
-            Colaboradores organizados para consulta rápida, edição precisa e uso
-            confiável em mobile.
+            Colaboradores organizados para consulta e edição rápida.
           </h1>
           <p className="hero-description">
-            Centralize vínculos, situação contratual e navegação para o perfil
-            individual em uma listagem mais clara para operação diária.
+            Vínculos, situação e acesso ao perfil individual em uma lista objetiva.
           </p>
 
           <div className="hero-actions">
@@ -626,12 +636,13 @@ export default function Employees() {
                   type="button"
                   onClick={() => setIsModalOpen(false)}
                   className="btn-secondary"
+                  disabled={isSaving}
                 >
                   Cancelar
                 </button>
-                <button type="submit" className="btn-primary">
+                <Button type="submit" loading={isSaving} loadingText="Salvando...">
                   Salvar colaborador
-                </button>
+                </Button>
               </div>
             </form>
           </div>

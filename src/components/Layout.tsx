@@ -15,7 +15,6 @@ import {
   LogOut,
   Menu,
   ShieldCheck,
-  Sparkles,
   Stethoscope,
   type LucideIcon,
   Users,
@@ -38,43 +37,43 @@ const navItems: NavItem[] = [
     name: "Dashboard",
     path: "/",
     icon: LayoutDashboard,
-    description: "Indicadores e visão executiva.",
+    description: "Visão geral da operação.",
   },
   {
     name: "Empresas",
     path: "/empresas",
     icon: Building2,
-    description: "Base de clientes e contatos.",
+    description: "Clientes e contatos.",
   },
   {
     name: "Setores & Cargos",
     path: "/setores",
     icon: Briefcase,
-    description: "Estrutura operacional e funções.",
+    description: "Estrutura e funções.",
   },
   {
     name: "Colaboradores",
     path: "/colaboradores",
     icon: Users,
-    description: "Gestão de vínculos e histórico.",
+    description: "Pessoas e vínculos.",
   },
   {
     name: "Estoque de EPIs",
     path: "/epis",
     icon: HardHat,
-    description: "Catálogo, vínculos por cargo e estoque.",
+    description: "Catálogo e estoque.",
   },
   {
     name: "Entregas de EPI",
     path: "/entregas",
     icon: ShieldCheck,
-    description: "Entrega, devolução e ficha.",
+    description: "Entrega e devolução.",
   },
   {
     name: "Saúde Ocupacional",
     path: "/saude",
     icon: Stethoscope,
-    description: "ASOs, afastamentos e encaminhamentos.",
+    description: "ASOs e afastamentos.",
   },
   {
     name: "Programas e Laudos",
@@ -86,13 +85,13 @@ const navItems: NavItem[] = [
     name: "Financeiro",
     path: "/financeiro",
     icon: DollarSign,
-    description: "Receitas, despesas e faturamento.",
+    description: "Receitas e despesas.",
   },
   {
     name: "Acessos",
     path: "/acessos",
     icon: KeyRound,
-    description: "Gestão de logins e perfis administrativos.",
+    description: "Logins e perfis.",
   },
 ];
 
@@ -101,8 +100,7 @@ function getRouteContext(pathname: string) {
     return {
       section: "Pessoas",
       label: "Perfil do colaborador",
-      description:
-        "Consulta individual com dados cadastrais, vínculo e histórico completo de EPIs.",
+      description: "Dados, vínculo e histórico de EPIs.",
     };
   }
 
@@ -110,8 +108,7 @@ function getRouteContext(pathname: string) {
     return {
       section: "Entregas de EPI",
       label: "Detalhe da entrega",
-      description:
-        "Conferência do registro, assinatura digital do colaborador e ficha operacional da entrega.",
+      description: "Registro, assinatura e ficha da entrega.",
     };
   }
 
@@ -206,6 +203,14 @@ export default function Layout() {
       return;
     }
 
+    const confirmed = window.confirm(
+      "Deseja realmente sair do sistema? Sua sessão atual será encerrada.",
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
     setIsLoggingOut(true);
 
     try {
@@ -249,23 +254,6 @@ export default function Layout() {
                 alt={brand.fullName}
                 className="brand-logo"
               />
-              <p className="brand-copy">{brand.sidebarDescription}</p>
-            </div>
-          </div>
-
-          <div className="sidebar-expandable-block">
-            <div className="sidebar-note">
-              <div>
-                <span className="sidebar-note-label">Ambiente online</span>
-                <p className="sidebar-note-title">
-                  Operação EXIN pronta para campo e escritório
-                </p>
-                <p className="sidebar-note-copy">
-                  Identidade visual atualizada com foco nas rotinas mais
-                  importantes da operação.
-                </p>
-              </div>
-              <Sparkles className="sidebar-note-icon h-5 w-5" />
             </div>
           </div>
 
@@ -283,9 +271,6 @@ export default function Layout() {
                 <item.icon className="nav-link-icon h-5 w-5" />
                 <span className="nav-link-copy sidebar-expandable">
                   <span className="nav-link-title">{item.name}</span>
-                  <span className="nav-link-description">
-                    {item.description}
-                  </span>
                 </span>
               </NavLink>
             ))}
@@ -313,23 +298,10 @@ export default function Layout() {
                   <span className="nav-link-title">
                     {isLoggingOut ? "Saindo..." : "Sair"}
                   </span>
-                  <span className="nav-link-description">
-                    Encerra a sessão atual com segurança.
-                  </span>
                 </span>
               </button>
             </div>
           </nav>
-
-          <div className="sidebar-expandable-block">
-            <div className="sidebar-footer">
-              <p className="sidebar-footer-title">Gestão integrada EXIN</p>
-              <p className="sidebar-footer-copy">
-                Empresas, pessoas, saúde ocupacional, programas e financeiro em
-                uma navegação única e alinhada à nova identidade.
-              </p>
-            </div>
-          </div>
         </div>
       </aside>
 

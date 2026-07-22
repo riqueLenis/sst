@@ -122,8 +122,7 @@ export default function AccessManagement() {
             Crie logins administrativos e operacionais sem expor credenciais na tela pública.
           </h1>
           <p className="hero-description">
-            O administrador passa a controlar diretamente quem entra no sistema,
-            com criação de usuários no backend e autenticação validada contra o banco.
+            Crie e gerencie os logins do sistema direto pelo backend.
           </p>
 
           <div className="hero-actions">
@@ -184,6 +183,7 @@ export default function AccessManagement() {
                 className="search-input"
                 placeholder="Ex.: Saulo Exin"
                 autoComplete="name"
+                required
               />
             </div>
 
@@ -200,6 +200,7 @@ export default function AccessManagement() {
                 placeholder="Ex.: saulo"
                 autoComplete="username"
                 spellCheck={false}
+                required
               />
             </div>
 
@@ -216,7 +217,12 @@ export default function AccessManagement() {
                 className="search-input"
                 placeholder="Informe uma senha forte"
                 autoComplete="new-password"
+                required
+                minLength={6}
               />
+              <p className="mt-1.5 text-xs text-slate-500">
+                Mínimo de 6 caracteres.
+              </p>
             </div>
 
             <div>

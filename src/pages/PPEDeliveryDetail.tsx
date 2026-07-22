@@ -84,9 +84,7 @@ export default function PPEDeliveryDetail() {
             Assinatura e conferência da entrega de EPI
           </h1>
           <p className="hero-description">
-            Registro completo da entrega realizada para {employee.name}, com
-            visualização da assinatura digital, captura facial vinculada, dados
-            do equipamento e informações operacionais do comprovante.
+            Comprovante da entrega para {employee.name}: assinatura, foto e dados do EPI.
           </p>
 
           <div className="hero-actions">

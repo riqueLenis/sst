@@ -7,6 +7,7 @@ import {
   Briefcase,
   HardHat,
   Layers,
+  LoaderCircle,
   X,
   Download,
 } from "lucide-react";
@@ -45,8 +46,10 @@ export default function Sectors() {
   });
 
   // Role Modal State
+  const [isSavingSector, setIsSavingSector] = useState(false);
   const [isRoleModalOpen, setIsRoleModalOpen] = useState(false);
   const [editingRoleId, setEditingRoleId] = useState<string | null>(null);
+  const [isSavingRole, setIsSavingRole] = useState(false);
   const [roleFormData, setRoleFormData] = useState<RoleFormState>({
     name: "",
     sectorId: "",
@@ -85,33 +88,49 @@ export default function Sectors() {
     setIsRoleModalOpen(true);
   };
 
-  const handleSectorSubmit = (e: React.FormEvent) => {
+  const handleSectorSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (editingSectorId) {
-      updateSector(editingSectorId, sectorFormData);
-    } else {
-      addSector(sectorFormData);
+    if (isSavingSector) {
+      return;
     }
-    setIsSectorModalOpen(false);
-    setSectorFormData({ name: "", description: "" });
-    setEditingSectorId(null);
+    setIsSavingSector(true);
+    try {
+      if (editingSectorId) {
+        await updateSector(editingSectorId, sectorFormData);
+      } else {
+        await addSector(sectorFormData);
+      }
+      setIsSectorModalOpen(false);
+      setSectorFormData({ name: "", description: "" });
+      setEditingSectorId(null);
+    } finally {
+      setIsSavingSector(false);
+    }
   };
 
-  const handleRoleSubmit = (e: React.FormEvent) => {
+  const handleRoleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (editingRoleId) {
-      updateRole(editingRoleId, roleFormData);
-    } else {
-      addRole(roleFormData);
+    if (isSavingRole) {
+      return;
     }
-    setIsRoleModalOpen(false);
-    setRoleFormData({
-      name: "",
-      sectorId: "",
-      description: "",
-      requiredPpeIds: [],
-    });
-    setEditingRoleId(null);
+    setIsSavingRole(true);
+    try {
+      if (editingRoleId) {
+        await updateRole(editingRoleId, roleFormData);
+      } else {
+        await addRole(roleFormData);
+      }
+      setIsRoleModalOpen(false);
+      setRoleFormData({
+        name: "",
+        sectorId: "",
+        description: "",
+        requiredPpeIds: [],
+      });
+      setEditingRoleId(null);
+    } finally {
+      setIsSavingRole(false);
+    }
   };
 
   const handleExportPDF = () => {
@@ -542,15 +561,20 @@ export default function Sectors() {
                 <button
                   type="button"
                   onClick={() => setIsSectorModalOpen(false)}
-                  className="px-4 py-2 text-sm font-semibold text-slate-700 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                  disabled={isSavingSector}
+                  className="px-4 py-2 text-sm font-semibold text-slate-700 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 text-sm font-semibold text-white bg-blue-600 border border-transparent rounded-xl hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm shadow-blue-200 transition-all"
+                  disabled={isSavingSector}
+                  className="inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-blue-600 border border-transparent rounded-xl hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm shadow-blue-200 transition-all disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  Salvar Setor
+                  {isSavingSector && (
+                    <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" />
+                  )}
+                  {isSavingSector ? "Salvando..." : "Salvar Setor"}
                 </button>
               </div>
             </form>
@@ -682,16 +706,20 @@ export default function Sectors() {
                 <button
                   type="button"
                   onClick={() => setIsRoleModalOpen(false)}
-                  className="px-4 py-2 text-sm font-semibold text-slate-700 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                  disabled={isSavingRole}
+                  className="px-4 py-2 text-sm font-semibold text-slate-700 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  disabled={!roleFormData.sectorId}
-                  className="px-4 py-2 text-sm font-semibold text-white bg-blue-600 border border-transparent rounded-xl hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm shadow-blue-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={!roleFormData.sectorId || isSavingRole}
+                  className="inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-blue-600 border border-transparent rounded-xl hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm shadow-blue-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Salvar Cargo
+                  {isSavingRole && (
+                    <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" />
+                  )}
+                  {isSavingRole ? "Salvando..." : "Salvar Cargo"}
                 </button>
               </div>
             </form>

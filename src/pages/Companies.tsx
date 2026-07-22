@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { useAppContext } from "../store/AppContext";
 import { exportTableToPDF } from "../lib/pdfUtils";
+import { Button } from "../components/Button";
 import type { Company } from "../types";
 
 export default function Companies() {
@@ -23,6 +24,7 @@ export default function Companies() {
     contact: "",
   });
   const [searchTerm, setSearchTerm] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
 
   const filteredCompanies = companies.filter(
     (company) =>
@@ -33,18 +35,28 @@ export default function Companies() {
     (company) => company.contact.trim().length > 0,
   ).length;
 
-  const handleSubmit = (event: React.FormEvent) => {
+  const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
 
-    if (editingId) {
-      updateCompany(editingId, formData);
-    } else {
-      addCompany(formData);
+    if (isSaving) {
+      return;
     }
 
-    setIsModalOpen(false);
-    setEditingId(null);
-    setFormData({ name: "", cnpj: "", address: "", contact: "" });
+    setIsSaving(true);
+
+    try {
+      if (editingId) {
+        await updateCompany(editingId, formData);
+      } else {
+        await addCompany(formData);
+      }
+
+      setIsModalOpen(false);
+      setEditingId(null);
+      setFormData({ name: "", cnpj: "", address: "", contact: "" });
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleEdit = (company: Company) => {
@@ -118,12 +130,10 @@ export default function Companies() {
         <div className="hero-card">
           <span className="hero-accent">Cadastro empresarial</span>
           <h1 className="hero-title">
-            Empresas em uma visão clara, pronta para operação em qualquer tela.
+            Empresas em uma visão clara e organizada.
           </h1>
           <p className="hero-description">
-            Concentre cadastro, busca, edição e exportação em uma listagem mais
-            executiva, com leitura objetiva em desktop e cartões nativos no
-            celular.
+            Cadastro, busca e exportação de empresas em uma lista clara.
           </p>
 
           <div className="hero-actions">
@@ -425,12 +435,13 @@ export default function Companies() {
                   type="button"
                   onClick={() => setIsModalOpen(false)}
                   className="btn-secondary"
+                  disabled={isSaving}
                 >
                   Cancelar
                 </button>
-                <button type="submit" className="btn-primary">
+                <Button type="submit" loading={isSaving} loadingText="Salvando...">
                   Salvar empresa
-                </button>
+                </Button>
               </div>
             </form>
           </div>

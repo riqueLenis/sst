@@ -7,6 +7,7 @@ import {
   Coins,
   Download,
   HardHat,
+  LoaderCircle,
   Pencil,
   Plus,
   Search,
@@ -101,6 +102,7 @@ export default function PPEs() {
   const { user } = useAuth();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
   const [formData, setFormData] = useState<PPEFormState>({
     name: "",
     ca: "",
@@ -130,8 +132,12 @@ export default function PPEs() {
     );
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (isSaving) {
+      return;
+    }
 
     if (editingId && !canEditPPEs) {
       showEditPermissionAlert();
@@ -143,22 +149,28 @@ export default function PPEs() {
       return;
     }
 
-    if (editingId) {
-      updatePPE(editingId, formData);
-    } else {
-      addPPE(formData);
+    setIsSaving(true);
+
+    try {
+      if (editingId) {
+        await updatePPE(editingId, formData);
+      } else {
+        await addPPE(formData);
+      }
+      setIsModalOpen(false);
+      setFormData({
+        name: "",
+        ca: "",
+        description: "",
+        stockQuantity: 0,
+        unitCost: 0,
+        minimumStock: DEFAULT_MINIMUM_STOCK,
+        usefulLifeDays: DEFAULT_USEFUL_LIFE_DAYS,
+      });
+      setEditingId(null);
+    } finally {
+      setIsSaving(false);
     }
-    setIsModalOpen(false);
-    setFormData({
-      name: "",
-      ca: "",
-      description: "",
-      stockQuantity: 0,
-      unitCost: 0,
-      minimumStock: DEFAULT_MINIMUM_STOCK,
-      usefulLifeDays: DEFAULT_USEFUL_LIFE_DAYS,
-    });
-    setEditingId(null);
   };
 
   const handleEdit = (ppe: PPE) => {
@@ -722,7 +734,7 @@ export default function PPEs() {
             Compra automática sugerida para reposição e cobertura
           </h2>
           <p className="mt-2 text-sm text-slate-500">
-            A lista cruza estoque atual, consumo dos últimos 30 dias, vida útil cadastrada e observada, além das movimentações de entrega, devolução e extravio para prever a reposição necessária.
+            Cruza estoque, consumo e vida útil para prever a reposição necessária.
           </p>
         </div>
 
@@ -1322,15 +1334,20 @@ export default function PPEs() {
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 text-sm font-semibold text-slate-700 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                  disabled={isSaving}
+                  className="px-4 py-2 text-sm font-semibold text-slate-700 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 text-sm font-semibold text-white bg-blue-600 border border-transparent rounded-xl hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm shadow-blue-200 transition-all"
+                  disabled={isSaving}
+                  className="inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-blue-600 border border-transparent rounded-xl hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm shadow-blue-200 transition-all disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  Salvar EPI
+                  {isSaving && (
+                    <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" />
+                  )}
+                  {isSaving ? "Salvando..." : "Salvar EPI"}
                 </button>
               </div>
             </form>

@@ -189,9 +189,7 @@ export default function Dashboard() {
             Uma visão operacional consistente, da diretoria ao celular.
           </h1>
           <p className="hero-description">
-            Acompanhe empresas, colaboradores, EPIs, programas, saúde
-            ocupacional e financeiro em um cockpit único desenhado para leitura
-            rápida em desktop, tablet e mobile.
+            Empresas, EPIs, saúde ocupacional e financeiro em um painel único.
           </p>
 
           <div className="hero-actions">

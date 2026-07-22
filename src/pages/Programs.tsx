@@ -9,6 +9,7 @@ import {
   AlertTriangle,
   CheckCircle2,
   Clock,
+  LoaderCircle,
   ShieldAlert,
 } from "lucide-react";
 import { exportTableToPDF } from "../lib/pdfUtils";
@@ -18,6 +19,7 @@ export default function Programs() {
     useAppContext();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
 
   const initialFormState = {
     companyId: "",
@@ -34,11 +36,19 @@ export default function Programs() {
   };
   const [formData, setFormData] = useState(initialFormState);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    addDocument(formData);
-    setIsModalOpen(false);
-    setFormData(initialFormState);
+    if (isSaving) {
+      return;
+    }
+    setIsSaving(true);
+    try {
+      await addDocument(formData);
+      setIsModalOpen(false);
+      setFormData(initialFormState);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleToggleStatus = (id: string, currentStatus: string) => {
@@ -569,16 +579,20 @@ export default function Programs() {
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 text-sm font-semibold text-slate-700 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+                  disabled={isSaving}
+                  className="px-4 py-2 text-sm font-semibold text-slate-700 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  disabled={!formData.companyId || !formData.title}
-                  className="px-4 py-2 text-sm font-semibold text-white bg-indigo-600 border border-transparent rounded-xl hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-sm shadow-indigo-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={!formData.companyId || !formData.title || isSaving}
+                  className="inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-indigo-600 border border-transparent rounded-xl hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-sm shadow-indigo-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Salvar Documento
+                  {isSaving && (
+                    <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" />
+                  )}
+                  {isSaving ? "Salvando..." : "Salvar Documento"}
                 </button>
               </div>
             </form>

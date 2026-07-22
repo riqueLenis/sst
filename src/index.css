@@ -247,7 +247,9 @@ thead th {
 }
 
 .brand-mark {
-  display: inline-flex;
+  /* No mobile (drawer) e no desktop expandido mostramos apenas a logo.
+     O ícone compacto reaparece só no rail colapsado do desktop. */
+  display: none;
   align-items: center;
   justify-content: center;
   width: 2.45rem;
@@ -939,6 +941,18 @@ thead th {
   transform: translateY(-1px);
 }
 
+.btn-primary:disabled,
+.btn-secondary:disabled,
+.btn-soft:disabled,
+.btn-primary[aria-busy="true"],
+.btn-secondary[aria-busy="true"],
+.btn-soft[aria-busy="true"] {
+  cursor: not-allowed;
+  opacity: 0.65;
+  transform: none;
+  box-shadow: none;
+}
+
 .btn-primary {
   color: #fff;
   border: 1px solid transparent;
@@ -1351,6 +1365,16 @@ thead th {
   .app-sidebar:hover .sidebar-brand,
   .app-sidebar:focus-within .sidebar-brand {
     justify-content: flex-start;
+  }
+
+  /* Ícone compacto visível apenas no rail colapsado; some ao expandir. */
+  .app-sidebar .brand-mark {
+    display: inline-flex;
+  }
+
+  .app-sidebar:hover .brand-mark,
+  .app-sidebar:focus-within .brand-mark {
+    display: none;
   }
 
   .app-sidebar .sidebar-expandable {

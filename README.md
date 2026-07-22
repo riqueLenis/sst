@@ -64,6 +64,17 @@ O frontend agora consome a API autenticada sem expor o token em `localStorage`; 
 - o perfil `tecnico` pode somente cadastrar novos EPIs no estoque
 - entregas, devoluções e demais cadastros ficam sob responsabilidade do `gestor` ou `admin`
 
+### Deploy em produção (api.exingroup.com.br)
+
+1. Copie `.env.production.example` para `.env` no servidor e preencha as credenciais do MySQL criadas no painel (não use `root`).
+2. Gere um `JWT_SECRET` novo: `node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"`.
+3. Mantenha `NODE_ENV=production`, `TRUST_PROXY=true` (backend atrás de proxy/HTTPS), `AUTH_COOKIE_SECURE=true`.
+4. Garanta que o banco (`MYSQL_DATABASE`) já exista — em produção o `MYSQL_AUTO_CREATE_DATABASE` fica desligado.
+5. Suba o backend: `npm run backend:start`. Na primeira execução, com o banco sem usuários, o sistema cria automaticamente o admin inicial.
+6. Faça login com o admin inicial e **troque a senha imediatamente** (crie um novo admin em `Acessos` e desative/rotacione o padrão).
+
+**Admin inicial:** definido por `BOOTSTRAP_ADMIN_USERNAME` / `BOOTSTRAP_ADMIN_PASSWORD` (padrão `admin` / `Exin@2025Admin`). Ele só é criado quando a tabela `users` está vazia; para desligar, use `BOOTSTRAP_ADMIN_ENABLED=false`.
+
 ### Observacoes importantes
 
 - os dados persistem entre reinicializações porque agora ficam no MySQL local

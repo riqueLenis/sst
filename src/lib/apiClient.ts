@@ -114,9 +114,32 @@ export const apiClient = {
     request<T>(path, { ...options, method: "DELETE" }),
 };
 
+const describeApiErrorDetails = (details: unknown): string | null => {
+  if (!Array.isArray(details)) {
+    return null;
+  }
+
+  const messages = details
+    .map((item) =>
+      item && typeof item === "object" && "message" in item
+        ? String((item as { message?: unknown }).message ?? "").trim()
+        : "",
+    )
+    .filter((message) => message.length > 0);
+
+  if (messages.length === 0) {
+    return null;
+  }
+
+  // Remove mensagens duplicadas mantendo a ordem original.
+  return Array.from(new Set(messages)).join(" ");
+};
+
 export const getApiErrorMessage = (error: unknown) => {
   if (error instanceof ApiError) {
-    return error.message;
+    // Prioriza os detalhes por campo (ex.: "Senha deve ter no mínimo 6
+    // caracteres.") em vez da mensagem genérica de validação.
+    return describeApiErrorDetails(error.details) ?? error.message;
   }
 
   if (error instanceof Error) {
