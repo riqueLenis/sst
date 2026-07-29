@@ -26,8 +26,6 @@ import {
 
 type DeliveryFormState = {
   employeeId: string;
-  ppeId: string;
-  quantity: number;
   deliveryDate: string;
   reason: string;
   replacementReason: string;
@@ -45,7 +43,7 @@ export default function PPEDeliveries() {
     roles,
     ppes,
     companies,
-    addPPEDelivery,
+    addPPEDeliveries,
     updatePPEDelivery,
   } = useAppContext();
   const { user } = useAuth();
@@ -71,8 +69,6 @@ export default function PPEDeliveries() {
 
   const initialFormState: DeliveryFormState = {
     employeeId: "",
-    ppeId: "",
-    quantity: 1,
     deliveryDate: new Date().toISOString().split("T")[0],
     reason: "Admissão",
     replacementReason: "",
@@ -83,6 +79,10 @@ export default function PPEDeliveries() {
     facePhotoCapturedAt: "",
   };
   const [formData, setFormData] = useState(initialFormState);
+  // EPIs selecionados para entrega (ppeId -> quantidade). Um registro por EPI.
+  const [selectedPpeQuantities, setSelectedPpeQuantities] = useState<
+    Record<string, number>
+  >({});
 
   const selectedEmployee = employees.find(
     (employee) => employee.id === formData.employeeId,
@@ -99,9 +99,6 @@ export default function PPEDeliveries() {
     const ppe = ppes.find((currentPpe) => currentPpe.id === ppeId);
     return ppe ? [ppe] : [];
   });
-  const requiredAvailablePPEs = availablePPEs.filter((ppe) =>
-    requiredRolePpeIdSet.has(ppe.id),
-  );
   const otherAvailablePPEs = availablePPEs.filter(
     (ppe) => !requiredRolePpeIdSet.has(ppe.id),
   );
@@ -111,24 +108,84 @@ export default function PPEDeliveries() {
   const canManageDeliveries =
     user?.role === "admin" || user?.role === "manager";
 
-  const buildSuggestedPpeId = (employeeId: string) => {
-    const employee = employees.find((currentEmployee) => currentEmployee.id === employeeId);
-    const role = roles.find((currentRole) => currentRole.id === employee?.roleId);
-    const matchingRequiredPpeId = (role?.requiredPpeIds ?? []).find((ppeId) =>
-      availablePPEs.some((ppe) => ppe.id === ppeId),
+  // Pré-seleciona todos os EPIs obrigatórios do cargo que têm estoque.
+  const buildDefaultSelection = (employeeId: string): Record<string, number> => {
+    const employee = employees.find(
+      (currentEmployee) => currentEmployee.id === employeeId,
     );
+    const role = roles.find((currentRole) => currentRole.id === employee?.roleId);
+    const selection: Record<string, number> = {};
 
-    return matchingRequiredPpeId ?? availablePPEs[0]?.id ?? "";
+    (role?.requiredPpeIds ?? []).forEach((ppeId) => {
+      const ppe = ppes.find((currentPpe) => currentPpe.id === ppeId);
+      if (ppe && ppe.stockQuantity > 0) {
+        selection[ppeId] = 1;
+      }
+    });
+
+    return selection;
   };
 
   const resetForm = (overrides: Partial<DeliveryFormState> = {}) => {
     setFormData({ ...initialFormState, ...overrides });
+    setSelectedPpeQuantities({});
     setReplacementReasonError(null);
     setSignatureError(null);
     setSignatureFeedback(null);
     setFacePhotoError(null);
     setFacePhotoFeedback(null);
   };
+
+  // Ao alterar os EPIs selecionados, a assinatura/foto capturadas ficam
+  // inválidas (o termo assinado precisa refletir os EPIs corretos).
+  const invalidateCapturedProofs = () => {
+    if (!formData.employeeSignature && !formData.employeeFacePhoto) {
+      return;
+    }
+
+    setFormData((prev) => ({
+      ...prev,
+      employeeSignature: "",
+      signedAt: "",
+      employeeFacePhoto: "",
+      facePhotoCapturedAt: "",
+    }));
+    setSignatureError(
+      "A assinatura precisa ser refeita após alterar os EPIs selecionados.",
+    );
+    setSignatureFeedback(
+      "Assinatura removida porque os EPIs selecionados foram alterados.",
+    );
+    setFacePhotoError(
+      "A foto facial precisa ser capturada novamente após alterar os EPIs.",
+    );
+    setFacePhotoFeedback(
+      "Foto facial removida porque os EPIs selecionados foram alterados.",
+    );
+  };
+
+  const togglePpeSelection = (ppeId: string) => {
+    setSelectedPpeQuantities((prev) => {
+      const next = { ...prev };
+      if (ppeId in next) {
+        delete next[ppeId];
+      } else {
+        next[ppeId] = 1;
+      }
+      return next;
+    });
+    invalidateCapturedProofs();
+  };
+
+  const setPpeQuantity = (ppeId: string, quantity: number) => {
+    setSelectedPpeQuantities((prev) => ({
+      ...prev,
+      [ppeId]: Math.max(1, Number.isFinite(quantity) ? Math.trunc(quantity) : 1),
+    }));
+    invalidateCapturedProofs();
+  };
+
+  const selectedPpeCount = Object.keys(selectedPpeQuantities).length;
 
   const closeModal = () => {
     setIsModalOpen(false);
@@ -237,15 +294,13 @@ export default function PPEDeliveries() {
   };
 
   const openNewDeliveryModal = () => {
-    resetForm({
-      employeeId: activeEmployees[0]?.id ?? "",
-      ppeId: buildSuggestedPpeId(activeEmployees[0]?.id ?? ""),
-    });
+    const employeeId = activeEmployees[0]?.id ?? "";
+    resetForm({ employeeId });
+    setSelectedPpeQuantities(buildDefaultSelection(employeeId));
     setIsModalOpen(true);
   };
 
   const handleEmployeeChange = (employeeId: string) => {
-    const nextPpeId = buildSuggestedPpeId(employeeId);
     const shouldResetSignature =
       employeeId !== formData.employeeId &&
       (Boolean(formData.employeeSignature) || Boolean(formData.employeeFacePhoto));
@@ -253,7 +308,6 @@ export default function PPEDeliveries() {
     setFormData((prev) => ({
       ...prev,
       employeeId,
-      ppeId: nextPpeId || prev.ppeId,
       ...(shouldResetSignature
         ? {
             employeeSignature: "",
@@ -263,6 +317,9 @@ export default function PPEDeliveries() {
           }
         : {}),
     }));
+
+    // Recarrega os EPIs obrigatórios do novo colaborador.
+    setSelectedPpeQuantities(buildDefaultSelection(employeeId));
 
     if (shouldResetSignature) {
       setSignatureError(
@@ -291,6 +348,11 @@ export default function PPEDeliveries() {
     }
 
     let hasError = false;
+
+    if (selectedPpeCount === 0) {
+      window.alert("Selecione pelo menos um EPI para registrar a entrega.");
+      hasError = true;
+    }
 
     if (
       formData.reason === "Substituição" &&
@@ -325,7 +387,33 @@ export default function PPEDeliveries() {
     setIsSaving(true);
 
     try {
-      await addPPEDelivery(formData);
+      // Uma entrega por EPI selecionado, todas no mesmo lote (batchId) e
+      // compartilhando assinatura, foto, data e motivo.
+      const batchId =
+        typeof crypto !== "undefined" && "randomUUID" in crypto
+          ? crypto.randomUUID()
+          : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+
+      const deliveries = Object.entries(selectedPpeQuantities).map(
+        ([ppeId, quantity]) => ({
+          employeeId: formData.employeeId,
+          ppeId,
+          batchId,
+          quantity,
+          deliveryDate: formData.deliveryDate,
+          reason: formData.reason,
+          ...(formData.reason === "Substituição"
+            ? { replacementReason: formData.replacementReason }
+            : {}),
+          status: formData.status,
+          employeeSignature: formData.employeeSignature,
+          signedAt: formData.signedAt,
+          employeeFacePhoto: formData.employeeFacePhoto,
+          facePhotoCapturedAt: formData.facePhotoCapturedAt,
+        }),
+      );
+
+      await addPPEDeliveries(deliveries);
       closeModal();
     } finally {
       setIsSaving(false);
@@ -350,14 +438,27 @@ export default function PPEDeliveries() {
 
   const generatePDF = (delivery: PPEDelivery) => {
     const employee = employees.find((e) => e.id === delivery.employeeId);
-    const ppe = ppes.find((p) => p.id === delivery.ppeId);
     const company = companies.find((c) => c.id === employee?.companyId);
 
-    if (!employee || !ppe || !company) {
+    if (!employee || !company) {
       return;
     }
 
-    void generatePPEDeliveryPdf({ delivery, employee, ppe, company });
+    // Agrupa todos os EPIs entregues no mesmo lote (mesma assinatura/foto).
+    const batchDeliveries = delivery.batchId
+      ? ppeDeliveries.filter((item) => item.batchId === delivery.batchId)
+      : [delivery];
+
+    const items = batchDeliveries.flatMap((item) => {
+      const ppe = ppes.find((p) => p.id === item.ppeId);
+      return ppe ? [{ delivery: item, ppe }] : [];
+    });
+
+    if (items.length === 0) {
+      return;
+    }
+
+    void generatePPEDeliveryPdf({ items, employee, company });
   };
 
   const handleExportListPDF = () => {
@@ -812,143 +913,159 @@ export default function PPEDeliveries() {
 
                   {selectedRole ? (
                     requiredRolePPEs.length > 0 ? (
-                      <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                      <div className="mt-3 space-y-2">
+                        <p className="text-xs text-slate-500">
+                          Marque os EPIs a entregar. Por padrão, todos os
+                          obrigatórios com estoque já vêm selecionados.
+                        </p>
                         {requiredRolePPEs.map((ppe) => {
-                          const isSelected = formData.ppeId === ppe.id;
                           const isOutOfStock = ppe.stockQuantity <= 0;
+                          const isSelected = ppe.id in selectedPpeQuantities;
 
                           return (
-                            <button
+                            <label
                               key={ppe.id}
-                              type="button"
-                              onClick={() => updateFormField("ppeId", ppe.id)}
-                              disabled={isOutOfStock}
-                              className={`rounded-xl border px-3 py-3 text-left transition-colors ${
+                              className={`flex items-center gap-3 rounded-xl border px-3 py-2.5 transition-colors ${
                                 isSelected
                                   ? "border-blue-200 bg-blue-50"
-                                  : "border-slate-200 bg-white hover:border-slate-300"
+                                  : "border-slate-200 bg-white"
                               } ${
                                 isOutOfStock
                                   ? "cursor-not-allowed opacity-60"
                                   : "cursor-pointer"
                               }`}
                             >
-                              <div className="flex items-start justify-between gap-3">
-                                <div className="min-w-0">
-                                  <p className="flex items-center gap-2 text-sm font-semibold text-slate-900">
-                                    <HardHat className="h-4 w-4 text-blue-600" />
-                                    {ppe.name}
-                                  </p>
-                                  <p className="mt-1 text-xs text-slate-500">
-                                    CA {ppe.ca}
-                                  </p>
-                                </div>
-                                <span
-                                  className={`inline-flex rounded-full border px-2 py-0.5 text-[11px] font-semibold ${
-                                    isOutOfStock
-                                      ? "border-red-100 bg-red-50 text-red-700"
-                                      : "border-emerald-100 bg-emerald-50 text-emerald-700"
-                                  }`}
-                                >
+                              <input
+                                type="checkbox"
+                                checked={isSelected}
+                                disabled={isOutOfStock}
+                                onChange={() => togglePpeSelection(ppe.id)}
+                                className="h-4 w-4 shrink-0 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                              />
+                              <div className="min-w-0 flex-1">
+                                <p className="flex items-center gap-2 text-sm font-semibold text-slate-900">
+                                  <HardHat className="h-4 w-4 text-blue-600" />
+                                  {ppe.name}
+                                </p>
+                                <p className="mt-0.5 text-xs text-slate-500">
+                                  CA {ppe.ca} •{" "}
                                   {isOutOfStock
                                     ? "Sem estoque"
-                                    : `${ppe.stockQuantity} un`}
-                                </span>
+                                    : `${ppe.stockQuantity} un em estoque`}
+                                </p>
                               </div>
-                            </button>
+                              {isSelected && !isOutOfStock && (
+                                <input
+                                  type="number"
+                                  min="1"
+                                  max={ppe.stockQuantity}
+                                  value={selectedPpeQuantities[ppe.id]}
+                                  onClick={(event) => event.preventDefault()}
+                                  onChange={(event) =>
+                                    setPpeQuantity(
+                                      ppe.id,
+                                      parseInt(event.target.value, 10) || 1,
+                                    )
+                                  }
+                                  className="w-16 shrink-0 rounded-lg border border-slate-200 px-2 py-1.5 text-center text-sm"
+                                  aria-label={`Quantidade de ${ppe.name}`}
+                                />
+                              )}
+                            </label>
                           );
                         })}
                       </div>
                     ) : (
                       <p className="mt-3 text-sm text-slate-500">
-                        Nenhum EPI obrigatório está vinculado a este cargo ainda.
+                        Nenhum EPI obrigatório está vinculado a este cargo. Use a
+                        lista abaixo para adicionar EPIs manualmente.
                       </p>
                     )
                   ) : (
                     <p className="mt-3 text-sm text-amber-700">
-                      Atualize o colaborador com um cargo válido para liberar a sugestão automática de EPIs.
+                      Atualize o colaborador com um cargo válido para carregar os
+                      EPIs obrigatórios.
                     </p>
                   )}
                 </div>
               )}
 
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1.5">
-                  EPI
-                </label>
-                <select
-                  required
-                  value={formData.ppeId}
-                  onChange={(e) => updateFormField("ppeId", e.target.value)}
-                  className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all bg-white"
-                >
-                  <option value="" disabled>
-                    Selecione um EPI
-                  </option>
+              {otherAvailablePPEs.length > 0 && (
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-1.5">
+                    Outros EPIs disponíveis{" "}
+                    <span className="font-normal text-slate-400">(opcional)</span>
+                  </label>
+                  <div className="space-y-2">
+                    {otherAvailablePPEs.map((ppe) => {
+                      const isSelected = ppe.id in selectedPpeQuantities;
 
-                  {requiredAvailablePPEs.length > 0 && (
-                    <optgroup label="EPIs vinculados ao cargo">
-                      {requiredAvailablePPEs.map((ppe) => (
-                        <option key={ppe.id} value={ppe.id}>
-                          {ppe.name} (CA: {ppe.ca}) - Estoque: {ppe.stockQuantity}
-                        </option>
-                      ))}
-                    </optgroup>
-                  )}
+                      return (
+                        <label
+                          key={ppe.id}
+                          className={`flex items-center gap-3 rounded-xl border px-3 py-2.5 cursor-pointer transition-colors ${
+                            isSelected
+                              ? "border-blue-200 bg-blue-50"
+                              : "border-slate-200 bg-white"
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => togglePpeSelection(ppe.id)}
+                            className="h-4 w-4 shrink-0 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                          />
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-semibold text-slate-900">
+                              {ppe.name}
+                            </p>
+                            <p className="mt-0.5 text-xs text-slate-500">
+                              CA {ppe.ca} • {ppe.stockQuantity} un em estoque
+                            </p>
+                          </div>
+                          {isSelected && (
+                            <input
+                              type="number"
+                              min="1"
+                              max={ppe.stockQuantity}
+                              value={selectedPpeQuantities[ppe.id]}
+                              onClick={(event) => event.preventDefault()}
+                              onChange={(event) =>
+                                setPpeQuantity(
+                                  ppe.id,
+                                  parseInt(event.target.value, 10) || 1,
+                                )
+                              }
+                              className="w-16 shrink-0 rounded-lg border border-slate-200 px-2 py-1.5 text-center text-sm"
+                              aria-label={`Quantidade de ${ppe.name}`}
+                            />
+                          )}
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
 
-                  {otherAvailablePPEs.length > 0 && (
-                    <optgroup
-                      label={
-                        requiredAvailablePPEs.length > 0
-                          ? "Demais EPIs disponíveis"
-                          : "EPIs disponíveis"
-                      }
-                    >
-                      {otherAvailablePPEs.map((ppe) => (
-                        <option key={ppe.id} value={ppe.id}>
-                          {ppe.name} (CA: {ppe.ca}) - Estoque: {ppe.stockQuantity}
-                        </option>
-                      ))}
-                    </optgroup>
-                  )}
-                </select>
-                {requiredAvailablePPEs.length > 0 && (
-                  <p className="mt-2 text-xs text-blue-700">
-                    Os EPIs vinculados ao cargo do colaborador aparecem primeiro na lista.
-                  </p>
-                )}
+              <div className="rounded-xl border border-blue-100 bg-blue-50/60 px-4 py-2.5 text-sm font-medium text-blue-800">
+                {selectedPpeCount > 0
+                  ? `${selectedPpeCount} EPI(s) selecionado(s) para entrega.`
+                  : "Nenhum EPI selecionado ainda."}
               </div>
 
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-1.5">
-                    Quantidade
-                  </label>
-                  <input
-                    type="number"
-                    min="1"
-                    required
-                    value={formData.quantity}
-                    onChange={(e) =>
-                      updateFormField("quantity", parseInt(e.target.value) || 1)
-                    }
-                    className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-1.5">
-                    Data da Entrega
-                  </label>
-                  <input
-                    type="date"
-                    required
-                    value={formData.deliveryDate}
-                    onChange={(e) =>
-                      updateFormField("deliveryDate", e.target.value)
-                    }
-                    className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                  />
-                </div>
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1.5">
+                  Data da Entrega
+                </label>
+                <input
+                  type="date"
+                  required
+                  value={formData.deliveryDate}
+                  onChange={(e) =>
+                    updateFormField("deliveryDate", e.target.value)
+                  }
+                  className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                />
               </div>
 
               <div>
@@ -1075,7 +1192,7 @@ export default function PPEDeliveries() {
                   type="submit"
                   disabled={
                     !formData.employeeId ||
-                    !formData.ppeId ||
+                    selectedPpeCount === 0 ||
                     !formData.employeeSignature ||
                     !formData.employeeFacePhoto ||
                     isSaving

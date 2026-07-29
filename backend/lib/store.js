@@ -300,6 +300,15 @@ export class MySqlStore {
 
   validateEntityBusinessRules(resource, entity) {
     switch (resource) {
+      case "employees":
+        if (entity.dismissalDate) {
+          ensureDateOrder(
+            entity.admissionDate,
+            entity.dismissalDate,
+            "A data de demissão não pode ser anterior à data de admissão.",
+          );
+        }
+        break;
       case "transactions":
         ensureDateOrder(
           entity.date,

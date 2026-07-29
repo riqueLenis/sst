@@ -191,12 +191,18 @@ const employeeSchema = z
   .object({
     name: trimmedString("Nome do colaborador", 180),
     cpf: trimmedString("CPF", 20),
-    rg: trimmedString("RG", 30),
+    rg: optionalTextField("RG", 30),
     birthDate: dateString("Data de nascimento"),
     admissionDate: dateString("Data de admissão"),
     companyId: trimmedString("Empresa", 80),
     roleId: trimmedString("Cargo", 80),
     status: enumField(["active", "inactive"], "Status do colaborador"),
+    // Demissão/desligamento. Mantém "" (em vez de descartar) para que reativar
+    // um colaborador limpe a data anterior no banco.
+    dismissalDate: z
+      .union([dateString("Data de demissão"), z.literal("")])
+      .default(""),
+    dismissalNotes: optionalTextField("Observações da demissão", 2000),
   })
   .strict();
 
@@ -204,7 +210,7 @@ const ppeSchema = z
   .object({
     name: trimmedString("Nome do EPI", 180),
     ca: trimmedString("CA", 30),
-    description: trimmedString("Descrição", 400),
+    description: optionalTextField("Descrição", 400),
     stockQuantity: nonNegativeInteger("Quantidade em estoque"),
     unitCost: nonNegativeNumber("Custo unitário estimado").default(0),
     minimumStock: nonNegativeInteger("Estoque mínimo").default(5),
@@ -216,6 +222,8 @@ const ppeDeliveryObjectSchema = z
   .object({
     employeeId: trimmedString("Colaborador", 80),
     ppeId: trimmedString("EPI", 80),
+    // Agrupa várias entregas registradas juntas (todos os EPIs do colaborador).
+    batchId: trimmedString("Lote", 64).optional(),
     quantity: positiveInteger("Quantidade"),
     deliveryDate: dateString("Data da entrega"),
     returnDate: optionalDateString("Data de devolução"),

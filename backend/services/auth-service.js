@@ -6,13 +6,8 @@ import { env } from "../config/env.js";
 import { HttpError } from "../lib/http-error.js";
 
 export const userRoles = ["admin", "manager", "technician"];
-const LOGIN_ATTEMPT_WINDOW_MS = 15 * 60 * 1000;
-const MAX_LOGIN_ATTEMPTS_PER_USER = 5;
 const JWT_ALGORITHM = "HS256";
 
-// Hash "isca" usado para comparar a senha mesmo quando o usuário não existe.
-// Isso mantém o tempo de resposta constante e evita a enumeração de usuários
-// por análise de tempo (timing attack).
 const DUMMY_PASSWORD_HASH = bcrypt.hashSync("invalid-login-placeholder", 10);
 
 const assertSupportedRole = (user) => {
@@ -48,7 +43,6 @@ const toManagedUser = (user) => ({
 export class AuthService {
   constructor(userRepository) {
     this.userRepository = userRepository;
-    this.failedLoginAttempts = new Map();
     this.revokedTokens = new Map();
   }
 
@@ -210,31 +204,23 @@ export class AuthService {
   async login({ username, password }) {
     const normalizedUsername = normalizeUsername(username);
 
-    this.pruneExpiredLoginAttempts();
     this.pruneRevokedTokens();
-    this.assertLoginAttemptsAllowed(normalizedUsername);
 
     const user = await this.userRepository.findByUsername(normalizedUsername);
-
-    // Sempre executa o compare (contra o hash real ou o de isca) para que o
-    // tempo de resposta não revele se o usuário existe.
     const passwordMatches = bcrypt.compareSync(
       password,
       user?.passwordHash ?? DUMMY_PASSWORD_HASH,
     );
 
     if (!user || !passwordMatches) {
-      this.registerFailedLogin(normalizedUsername);
       throw new HttpError(401, "Usuário ou senha inválidos.");
     }
 
     if (!user.isActive) {
-      this.registerFailedLogin(normalizedUsername);
       throw new HttpError(403, "Usuário desativado.");
     }
 
     assertSupportedRole(user);
-    this.clearFailedLogins(normalizedUsername);
 
     return {
       token: this.issueToken(user),
@@ -259,51 +245,6 @@ export class AuthService {
         jwtid: randomUUID(),
       },
     );
-  }
-
-  registerFailedLogin(username) {
-    const currentAttempt = this.failedLoginAttempts.get(username);
-    const now = Date.now();
-
-    if (!currentAttempt || currentAttempt.expiresAt <= now) {
-      this.failedLoginAttempts.set(username, {
-        count: 1,
-        expiresAt: now + LOGIN_ATTEMPT_WINDOW_MS,
-      });
-      return;
-    }
-
-    currentAttempt.count += 1;
-    this.failedLoginAttempts.set(username, currentAttempt);
-  }
-
-  clearFailedLogins(username) {
-    this.failedLoginAttempts.delete(username);
-  }
-
-  pruneExpiredLoginAttempts() {
-    const now = Date.now();
-
-    for (const [username, state] of this.failedLoginAttempts.entries()) {
-      if (state.expiresAt <= now) {
-        this.failedLoginAttempts.delete(username);
-      }
-    }
-  }
-
-  assertLoginAttemptsAllowed(username) {
-    const currentAttempt = this.failedLoginAttempts.get(username);
-
-    if (!currentAttempt) {
-      return;
-    }
-
-    if (currentAttempt.count >= MAX_LOGIN_ATTEMPTS_PER_USER) {
-      throw new HttpError(
-        429,
-        "Muitas tentativas para este usuário. Aguarde alguns minutos antes de tentar novamente.",
-      );
-    }
   }
 
   pruneRevokedTokens() {

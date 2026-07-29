@@ -94,14 +94,18 @@ export default function PPEDeliveryDetail() {
             </Link>
             <button
               type="button"
-              onClick={() =>
-                void generatePPEDeliveryPdf({
-                  delivery,
-                  employee,
-                  ppe,
-                  company,
-                })
-              }
+              onClick={() => {
+                const batchDeliveries = delivery.batchId
+                  ? ppeDeliveries.filter(
+                      (item) => item.batchId === delivery.batchId,
+                    )
+                  : [delivery];
+                const items = batchDeliveries.flatMap((item) => {
+                  const itemPpe = ppes.find((p) => p.id === item.ppeId);
+                  return itemPpe ? [{ delivery: item, ppe: itemPpe }] : [];
+                });
+                void generatePPEDeliveryPdf({ items, employee, company });
+              }}
               className="btn-primary"
             >
               <Download className="h-4 w-4" />

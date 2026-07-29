@@ -64,6 +64,7 @@ interface AppContextType extends AppState {
   deletePPE: (id: string) => Promise<void>;
 
   addPPEDelivery: (delivery: Omit<PPEDelivery, "id">) => Promise<void>;
+  addPPEDeliveries: (deliveries: Array<Omit<PPEDelivery, "id">>) => Promise<void>;
   updatePPEDelivery: (id: string, delivery: Partial<PPEDelivery>) => Promise<void>;
 
   addTransaction: (transaction: Omit<Transaction, "id">) => Promise<void>;
@@ -354,6 +355,19 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
     [runMutation, token],
   );
 
+  const addPPEDeliveries = useCallback(
+    async (deliveries: Array<Omit<PPEDelivery, "id">>) => {
+      await runMutation(async () => {
+        // Registra cada EPI do lote em sequência; um único refresh acontece
+        // ao final (dentro do runMutation).
+        for (const delivery of deliveries) {
+          await apiClient.post(resourcePaths.ppeDeliveries, delivery, { token });
+        }
+      });
+    },
+    [runMutation, token],
+  );
+
   const updatePPEDelivery = useCallback(
     async (id: string, delivery: Partial<PPEDelivery>) => {
       await runMutation(() =>
@@ -501,6 +515,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
       updatePPE,
       deletePPE,
       addPPEDelivery,
+      addPPEDeliveries,
       updatePPEDelivery,
       addTransaction,
       updateTransaction,
@@ -540,6 +555,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
       updatePPE,
       deletePPE,
       addPPEDelivery,
+      addPPEDeliveries,
       updatePPEDelivery,
       addTransaction,
       updateTransaction,

@@ -50,6 +50,9 @@ export interface Employee {
   companyId: string;
   roleId: string;
   status: "active" | "inactive";
+  // Preenchidos quando o colaborador é demitido/desligado.
+  dismissalDate?: string;
+  dismissalNotes?: string;
 }
 
 export interface PPE {
@@ -67,6 +70,7 @@ export interface PPEDelivery {
   id: string;
   employeeId: string;
   ppeId: string;
+  batchId?: string;
   quantity: number;
   deliveryDate: string;
   returnDate?: string;

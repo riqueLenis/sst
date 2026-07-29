@@ -184,9 +184,25 @@ export default function EmployeeProfile() {
                     : "bg-red-50 text-red-700 border-red-100"
                 }`}
               >
-                {employee.status === "active" ? "ATIVO" : "INATIVO"}
+                {employee.status === "active" ? "ATIVO" : "DEMITIDO"}
               </span>
             </div>
+
+            {employee.status === "inactive" && (
+              <div className="mt-3 rounded-2xl border border-red-100 bg-red-50/60 px-4 py-3 text-sm">
+                <p className="font-semibold text-red-800">
+                  Colaborador demitido
+                  {employee.dismissalDate
+                    ? ` em ${new Date(employee.dismissalDate).toLocaleDateString("pt-BR")}`
+                    : ""}
+                </p>
+                {employee.dismissalNotes && (
+                  <p className="mt-1 text-slate-600">
+                    {employee.dismissalNotes}
+                  </p>
+                )}
+              </div>
+            )}
 
             <div className="space-y-6">
               <div className="flex items-start gap-4">
@@ -229,7 +245,9 @@ export default function EmployeeProfile() {
                   <p className="text-sm font-medium text-slate-900 mt-0.5">
                     CPF: {employee.cpf}
                   </p>
-                  <p className="text-sm text-slate-500">RG: {employee.rg}</p>
+                  {employee.rg ? (
+                    <p className="text-sm text-slate-500">RG: {employee.rg}</p>
+                  ) : null}
                 </div>
               </div>
               <div className="flex items-start gap-4">

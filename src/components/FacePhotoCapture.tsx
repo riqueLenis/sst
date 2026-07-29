@@ -1,5 +1,5 @@
-import React, { useRef, useState } from "react";
-import { Camera, RefreshCcw, Trash2 } from "lucide-react";
+import React, { useEffect, useRef, useState } from "react";
+import { Camera, ImageUp, RefreshCcw, Trash2, X } from "lucide-react";
 import { cn } from "../lib/utils";
 
 const MAX_WIDTH = 720;
@@ -45,12 +45,19 @@ function loadImage(src: string) {
   });
 }
 
-async function compressFacePhoto(file: File) {
-  const source = await readFileAsDataUrl(file);
-  const image = await loadImage(source);
-  const scale = Math.min(MAX_WIDTH / image.width, MAX_HEIGHT / image.height, 1);
-  const width = Math.max(1, Math.round(image.width * scale));
-  const height = Math.max(1, Math.round(image.height * scale));
+// Desenha uma origem (imagem ou vídeo) num canvas redimensionado e retorna JPEG.
+function drawToJpeg(
+  source: HTMLImageElement | HTMLVideoElement,
+  sourceWidth: number,
+  sourceHeight: number,
+) {
+  const scale = Math.min(
+    MAX_WIDTH / sourceWidth,
+    MAX_HEIGHT / sourceHeight,
+    1,
+  );
+  const width = Math.max(1, Math.round(sourceWidth * scale));
+  const height = Math.max(1, Math.round(sourceHeight * scale));
 
   const canvas = document.createElement("canvas");
   canvas.width = width;
@@ -63,10 +70,20 @@ async function compressFacePhoto(file: File) {
 
   context.fillStyle = "#ffffff";
   context.fillRect(0, 0, width, height);
-  context.drawImage(image, 0, 0, width, height);
+  context.drawImage(source, 0, 0, width, height);
 
   return canvas.toDataURL("image/jpeg", IMAGE_QUALITY);
 }
+
+async function compressFacePhoto(file: File) {
+  const source = await readFileAsDataUrl(file);
+  const image = await loadImage(source);
+  return drawToJpeg(image, image.width, image.height);
+}
+
+const supportsCamera = () =>
+  typeof navigator !== "undefined" &&
+  Boolean(navigator.mediaDevices?.getUserMedia);
 
 export default function FacePhotoCapture({
   value,
@@ -77,8 +94,45 @@ export default function FacePhotoCapture({
   error,
 }: FacePhotoCaptureProps) {
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const [isCameraOpen, setIsCameraOpen] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingError, setProcessingError] = useState<string | null>(null);
+
+  // Libera a câmera (para as tracks). Sem isso, a câmera fica "presa" e a
+  // próxima abertura pode vir preta.
+  const stopStream = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
+    }
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
+  };
+
+  const closeCamera = () => {
+    stopStream();
+    setIsCameraOpen(false);
+  };
+
+  // Garante que a câmera seja liberada ao desmontar (ex.: fechar o modal).
+  useEffect(() => stopStream, []);
+
+  // Conecta o stream ao elemento de vídeo assim que a câmera abre.
+  useEffect(() => {
+    const video = videoRef.current;
+    if (isCameraOpen && video && streamRef.current) {
+      video.srcObject = streamRef.current;
+      const playPromise = video.play();
+      if (playPromise) {
+        playPromise.catch(() => {
+          /* alguns navegadores rejeitam play() silenciosamente */
+        });
+      }
+    }
+  }, [isCameraOpen]);
 
   const openPicker = () => {
     inputRef.current?.click();
@@ -87,6 +141,56 @@ export default function FacePhotoCapture({
   const clearInput = () => {
     if (inputRef.current) {
       inputRef.current.value = "";
+    }
+  };
+
+  const startCamera = async () => {
+    setProcessingError(null);
+
+    if (!supportsCamera()) {
+      setProcessingError(
+        "Câmera ao vivo indisponível neste dispositivo. Use \"Enviar foto\".",
+      );
+      return;
+    }
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: "user",
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+        },
+        audio: false,
+      });
+      streamRef.current = stream;
+      setIsCameraOpen(true);
+    } catch {
+      setProcessingError(
+        "Não foi possível acessar a câmera. Verifique a permissão do navegador ou use \"Enviar foto\".",
+      );
+    }
+  };
+
+  const capturePhoto = () => {
+    const video = videoRef.current;
+    if (!video || !video.videoWidth || !video.videoHeight) {
+      setProcessingError("Aguarde a câmera carregar antes de capturar.");
+      return;
+    }
+
+    try {
+      const dataUrl = drawToJpeg(video, video.videoWidth, video.videoHeight);
+      onChange(dataUrl);
+      setProcessingError(null);
+    } catch (captureError) {
+      setProcessingError(
+        captureError instanceof Error
+          ? captureError.message
+          : "Não foi possível capturar a foto.",
+      );
+    } finally {
+      closeCamera();
     }
   };
 
@@ -119,6 +223,7 @@ export default function FacePhotoCapture({
   const handleClear = () => {
     clearInput();
     setProcessingError(null);
+    closeCamera();
     onClear();
   };
 
@@ -140,8 +245,8 @@ export default function FacePhotoCapture({
             Captura facial do colaborador
           </p>
           <p className="mt-1 text-xs text-slate-500">
-            No celular, a câmera frontal abre quando o navegador suporta. Em
-            computadores sem webcam, selecione uma foto manualmente.
+            A câmera abre dentro da própria tela. Se preferir, envie uma foto do
+            dispositivo.
           </p>
           {subjectName && (
             <p className="mt-1 text-xs font-medium text-slate-600">
@@ -151,28 +256,40 @@ export default function FacePhotoCapture({
         </div>
 
         <div className="flex flex-wrap gap-2">
+          {!isCameraOpen && (
+            <button
+              type="button"
+              onClick={startCamera}
+              disabled={isProcessing}
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 transition-colors hover:bg-slate-50 hover:text-slate-900 disabled:pointer-events-none disabled:opacity-50"
+            >
+              {value ? (
+                <RefreshCcw className="h-3.5 w-3.5" />
+              ) : (
+                <Camera className="h-3.5 w-3.5" />
+              )}
+              {value ? "Refazer foto" : "Abrir câmera"}
+            </button>
+          )}
+
           <button
             type="button"
             onClick={openPicker}
-            disabled={isProcessing}
+            disabled={isProcessing || isCameraOpen}
             className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 transition-colors hover:bg-slate-50 hover:text-slate-900 disabled:pointer-events-none disabled:opacity-50"
           >
-            {value ? (
-              <RefreshCcw className="h-3.5 w-3.5" />
-            ) : (
-              <Camera className="h-3.5 w-3.5" />
-            )}
-            {value ? "Refazer foto" : "Capturar rosto"}
+            <ImageUp className="h-3.5 w-3.5" />
+            Enviar foto
           </button>
 
           <button
             type="button"
             onClick={handleClear}
-            disabled={!value || isProcessing}
+            disabled={(!value && !isCameraOpen) || isProcessing}
             className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 transition-colors hover:bg-slate-50 hover:text-slate-900 disabled:pointer-events-none disabled:opacity-50"
           >
             <Trash2 className="h-3.5 w-3.5" />
-            Remover foto
+            Remover
           </button>
         </div>
       </div>
@@ -185,7 +302,35 @@ export default function FacePhotoCapture({
             : "border-slate-200",
         )}
       >
-        {value ? (
+        {isCameraOpen ? (
+          <div className="relative bg-slate-950">
+            <video
+              ref={videoRef}
+              autoPlay
+              playsInline
+              muted
+              className="block h-72 w-full object-cover sm:h-80"
+            />
+            <div className="absolute inset-x-0 bottom-0 flex items-center justify-center gap-3 bg-gradient-to-t from-slate-950/80 to-transparent p-4">
+              <button
+                type="button"
+                onClick={capturePhoto}
+                className="inline-flex items-center gap-2 rounded-full bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-blue-900/30 transition-colors hover:bg-blue-700"
+              >
+                <Camera className="h-4 w-4" />
+                Tirar foto
+              </button>
+              <button
+                type="button"
+                onClick={closeCamera}
+                className="inline-flex items-center gap-2 rounded-full bg-white/90 px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-lg transition-colors hover:bg-white"
+              >
+                <X className="h-4 w-4" />
+                Cancelar
+              </button>
+            </div>
+          </div>
+        ) : value ? (
           <div className="relative overflow-hidden bg-slate-950">
             <img
               src={value}
@@ -220,10 +365,12 @@ export default function FacePhotoCapture({
           className={value ? "font-medium text-emerald-700" : "text-slate-500"}
         >
           {isProcessing
-            ? "Processando foto capturada..."
-            : value
-              ? "Foto facial registrada. Se alterar os dados da entrega, recapture a foto."
-              : "A foto facial é obrigatória para concluir a entrega."}
+            ? "Processando foto..."
+            : isCameraOpen
+              ? "Posicione o rosto e toque em \"Tirar foto\"."
+              : value
+                ? "Foto facial registrada. Se alterar os dados da entrega, recapture a foto."
+                : "A foto facial é obrigatória para concluir a entrega."}
         </p>
         {(processingError || error) && (
           <p className="font-medium text-red-600">{processingError || error}</p>

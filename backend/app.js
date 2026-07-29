@@ -1,7 +1,6 @@
 import { randomUUID } from "node:crypto";
 import cors from "cors";
 import express from "express";
-import rateLimit from "express-rate-limit";
 import helmet from "helmet";
 import hpp from "hpp";
 import { env } from "./config/env.js";
@@ -105,10 +104,6 @@ export const createApp = async () => {
   const store = await MySqlStore.create();
   const authService = new AuthService(store.userRepository);
   await authService.bootstrapUsers();
-  const apiRateLimitMax =
-    env.nodeEnv === "production"
-      ? env.rateLimitMax
-      : Math.max(env.rateLimitMax, 1000);
 
   if (env.trustProxy) {
     app.set("trust proxy", 1);
@@ -155,46 +150,6 @@ export const createApp = async () => {
   app.use(express.json({ limit: env.bodyLimit }));
   app.use(express.urlencoded({ extended: true, limit: env.bodyLimit }));
 
-  const apiLimiter = rateLimit({
-    windowMs: env.rateLimitWindowMs,
-    max: apiRateLimitMax,
-    standardHeaders: true,
-    legacyHeaders: false,
-    message: {
-      error: {
-        message:
-          "Limite de requisições excedido. Tente novamente em instantes.",
-      },
-    },
-  });
-
-  const loginLimiter = rateLimit({
-    windowMs: 10 * 1000, // 10 segundos
-    max: 10,
-    standardHeaders: true,
-    legacyHeaders: false,
-    message: {
-      error: {
-        message: "Muitas tentativas de login. Aguarde alguns segundos.",
-      },
-    },
-  });
-
-  // Limita a criação/edição/remoção de usuários (ações administrativas raras)
-  // para conter abuso, mesmo com um token de admin válido comprometido.
-  const authUsersWriteLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000,
-    max: 40,
-    standardHeaders: true,
-    legacyHeaders: false,
-    message: {
-      error: {
-        message:
-          "Muitas operações de usuários em sequência. Tente novamente mais tarde.",
-      },
-    },
-  });
-
   app.get("/health", (req, res) => {
     res.json({
       status: "ok",
@@ -219,21 +174,10 @@ export const createApp = async () => {
   });
 
   app.use("/api/auth", setSensitiveResponseHeaders);
-  app.use("/api/auth/login", loginLimiter);
-  app.use("/api/auth/users", (req, res, next) => {
-    // Apenas escritas passam pelo limitador; a listagem (GET) fica livre.
-    if (req.method === "GET") {
-      next();
-      return;
-    }
-
-    authUsersWriteLimiter(req, res, next);
-  });
   app.use("/api/auth", createAuthRouter(authService));
   app.use(
     "/api",
     setSensitiveResponseHeaders,
-    apiLimiter,
     authenticate(authService),
     createApiRouter(store),
   );

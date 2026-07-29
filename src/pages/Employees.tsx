@@ -29,6 +29,9 @@ export default function Employees() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">(
+    "all",
+  );
 
   const initialFormState: EmployeeFormState = {
     name: "",
@@ -39,19 +42,25 @@ export default function Employees() {
     companyId: "",
     roleId: "",
     status: "active" as const,
+    dismissalDate: "",
+    dismissalNotes: "",
   };
 
   const [formData, setFormData] = useState<EmployeeFormState>(initialFormState);
   const [isSaving, setIsSaving] = useState(false);
 
   const searchDigits = searchTerm.replace(/\D/g, "");
-  const filteredEmployees = employees.filter(
-    (employee) =>
+  const filteredEmployees = employees.filter((employee) => {
+    const matchesSearch =
       employee.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       employee.cpf.includes(searchTerm) ||
       (searchDigits.length > 0 &&
-        employee.cpf.replace(/\D/g, "").includes(searchDigits)),
-  );
+        employee.cpf.replace(/\D/g, "").includes(searchDigits));
+    const matchesStatus =
+      statusFilter === "all" || employee.status === statusFilter;
+
+    return matchesSearch && matchesStatus;
+  });
   const activeEmployees = employees.filter(
     (employee) => employee.status === "active",
   ).length;
@@ -71,10 +80,19 @@ export default function Employees() {
     setIsSaving(true);
 
     try {
+      // Ao reativar (status ativo), zera os dados de demissão.
+      const payload: EmployeeFormState = {
+        ...formData,
+        dismissalDate:
+          formData.status === "inactive" ? formData.dismissalDate : "",
+        dismissalNotes:
+          formData.status === "inactive" ? formData.dismissalNotes : "",
+      };
+
       if (editingId) {
-        await updateEmployee(editingId, formData);
+        await updateEmployee(editingId, payload);
       } else {
-        await addEmployee(formData);
+        await addEmployee(payload);
       }
 
       setIsModalOpen(false);
@@ -95,6 +113,8 @@ export default function Employees() {
       companyId: employee.companyId,
       roleId: employee.roleId,
       status: employee.status,
+      dismissalDate: employee.dismissalDate ?? "",
+      dismissalNotes: employee.dismissalNotes ?? "",
     });
     setEditingId(employee.id);
     setIsModalOpen(true);
@@ -146,9 +166,9 @@ export default function Employees() {
       copy: "Colaboradores atualmente em atividade na operação.",
     },
     {
-      label: "Inativos",
+      label: "Demitidos",
       value: inactiveEmployees,
-      copy: "Pessoas mantidas no histórico, porém fora da rotina atual.",
+      copy: "Colaboradores desligados, mantidos no histórico.",
     },
     {
       label: "Empresas com vínculo",
@@ -274,6 +294,29 @@ export default function Employees() {
           </p>
         </div>
 
+        <div className="mt-4 inline-flex rounded-2xl border border-slate-200 bg-slate-50 p-1">
+          {(
+            [
+              { key: "all", label: "Todos" },
+              { key: "active", label: "Ativos" },
+              { key: "inactive", label: "Demitidos" },
+            ] as const
+          ).map((option) => (
+            <button
+              key={option.key}
+              type="button"
+              onClick={() => setStatusFilter(option.key)}
+              className={
+                statusFilter === option.key
+                  ? "rounded-xl bg-white px-4 py-1.5 text-sm font-semibold text-slate-900 shadow-sm"
+                  : "rounded-xl px-4 py-1.5 text-sm font-medium text-slate-500 hover:text-slate-700"
+              }
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+
         <div className="mobile-list mt-6 lg:hidden">
           {filteredEmployees.map((employee) => {
             const company = companies.find(
@@ -296,7 +339,7 @@ export default function Employees() {
                         : "status-pill border border-red-100 bg-red-50 text-red-700"
                     }
                   >
-                    {employee.status === "active" ? "Ativo" : "Inativo"}
+                    {employee.status === "active" ? "Ativo" : "Demitido"}
                   </span>
                 </div>
 
@@ -313,7 +356,36 @@ export default function Employees() {
                       {role?.name ?? "Não definido"}
                     </p>
                   </div>
+                  <div>
+                    <p className="mobile-record-label">Admissão</p>
+                    <p className="mobile-record-value">
+                      {employee.admissionDate
+                        ? new Date(employee.admissionDate).toLocaleDateString(
+                            "pt-BR",
+                          )
+                        : "—"}
+                    </p>
+                  </div>
+                  {employee.status === "inactive" && (
+                    <div>
+                      <p className="mobile-record-label">Demissão</p>
+                      <p className="mobile-record-value">
+                        {employee.dismissalDate
+                          ? new Date(employee.dismissalDate).toLocaleDateString(
+                              "pt-BR",
+                            )
+                          : "—"}
+                      </p>
+                    </div>
+                  )}
                 </div>
+
+                {employee.status === "inactive" && employee.dismissalNotes && (
+                  <p className="mt-2 rounded-xl bg-slate-50 px-3 py-2 text-xs text-slate-600">
+                    <span className="font-semibold">Observações:</span>{" "}
+                    {employee.dismissalNotes}
+                  </p>
+                )}
 
                 <div className="mobile-record-actions">
                   <Link
@@ -363,7 +435,8 @@ export default function Employees() {
                 <th className="px-6 py-4">CPF</th>
                 <th className="px-6 py-4">Empresa</th>
                 <th className="px-6 py-4">Cargo</th>
-                <th className="px-6 py-4">Status</th>
+                <th className="px-6 py-4">Admissão</th>
+                <th className="px-6 py-4">Situação</th>
                 <th className="px-6 py-4 text-right">Ações</th>
               </tr>
             </thead>
@@ -397,6 +470,13 @@ export default function Employees() {
                       {role?.name ?? "Não definido"}
                     </td>
                     <td className="px-6 py-4">
+                      {employee.admissionDate
+                        ? new Date(employee.admissionDate).toLocaleDateString(
+                            "pt-BR",
+                          )
+                        : "—"}
+                    </td>
+                    <td className="px-6 py-4">
                       <span
                         className={
                           employee.status === "active"
@@ -404,8 +484,26 @@ export default function Employees() {
                             : "status-pill border border-red-100 bg-red-50 text-red-700"
                         }
                       >
-                        {employee.status === "active" ? "Ativo" : "Inativo"}
+                        {employee.status === "active" ? "Ativo" : "Demitido"}
                       </span>
+                      {employee.status === "inactive" &&
+                        employee.dismissalDate && (
+                          <p className="mt-1 text-xs text-slate-500">
+                            em{" "}
+                            {new Date(
+                              employee.dismissalDate,
+                            ).toLocaleDateString("pt-BR")}
+                          </p>
+                        )}
+                      {employee.status === "inactive" &&
+                        employee.dismissalNotes && (
+                          <p
+                            className="mt-0.5 max-w-56 truncate text-xs text-slate-400"
+                            title={employee.dismissalNotes}
+                          >
+                            {employee.dismissalNotes}
+                          </p>
+                        )}
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center justify-end gap-2">
@@ -519,22 +617,6 @@ export default function Employees() {
 
                 <div>
                   <label className="mb-1.5 block text-sm font-semibold text-slate-700">
-                    RG
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.rg}
-                    onChange={(event) =>
-                      setFormData({ ...formData, rg: event.target.value })
-                    }
-                    className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm"
-                    placeholder="00.000.000-X"
-                  />
-                </div>
-
-                <div>
-                  <label className="mb-1.5 block text-sm font-semibold text-slate-700">
                     Data de nascimento
                   </label>
                   <input
@@ -620,7 +702,7 @@ export default function Employees() {
 
                 <div>
                   <label className="mb-1.5 block text-sm font-semibold text-slate-700">
-                    Status
+                    Situação
                   </label>
                   <select
                     required
@@ -633,11 +715,57 @@ export default function Employees() {
                     }
                     className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm"
                   >
-                    <option value="active">Ativo</option>
-                    <option value="inactive">Inativo</option>
+                    <option value="active">Ativo (admitido)</option>
+                    <option value="inactive">Demitido</option>
                   </select>
                 </div>
               </div>
+
+              {formData.status === "inactive" && (
+                <div className="mt-4 space-y-4 rounded-2xl border border-red-100 bg-red-50/50 p-4">
+                  <p className="text-sm font-semibold text-red-800">
+                    Dados da demissão
+                  </p>
+                  <div>
+                    <label className="mb-1.5 block text-sm font-semibold text-slate-700">
+                      Data de demissão
+                    </label>
+                    <input
+                      type="date"
+                      required
+                      min={formData.admissionDate || undefined}
+                      value={formData.dismissalDate ?? ""}
+                      onChange={(event) =>
+                        setFormData({
+                          ...formData,
+                          dismissalDate: event.target.value,
+                        })
+                      }
+                      className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1.5 block text-sm font-semibold text-slate-700">
+                      Observações{" "}
+                      <span className="font-normal text-slate-400">
+                        (opcional)
+                      </span>
+                    </label>
+                    <textarea
+                      rows={3}
+                      value={formData.dismissalNotes ?? ""}
+                      onChange={(event) =>
+                        setFormData({
+                          ...formData,
+                          dismissalNotes: event.target.value,
+                        })
+                      }
+                      className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm"
+                      placeholder="Motivo do desligamento, pendências, observações relevantes..."
+                    />
+                  </div>
+                </div>
+              )}
 
               <div className="flex flex-col gap-3 border-t border-slate-200/70 pt-5 sm:flex-row sm:justify-end">
                 <button

@@ -1243,7 +1243,8 @@ export default function PPEs() {
               </div>
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-1.5">
-                  Descrição
+                  Descrição{" "}
+                  <span className="font-normal text-slate-400">(opcional)</span>
                 </label>
                 <textarea
                   rows={3}

@@ -23,10 +23,15 @@ export const formatPPEDeliveryReason = (
   return delivery.reason;
 };
 
-type GeneratePPEDeliveryPdfParams = {
+type PPEDeliveryItem = {
   delivery: PPEDelivery;
-  employee: Employee;
   ppe: PPE;
+};
+
+type GeneratePPEDeliveryPdfParams = {
+  // Um ou mais EPIs entregues em conjunto ao mesmo colaborador.
+  items: PPEDeliveryItem[];
+  employee: Employee;
   company: Company;
 };
 
@@ -34,11 +39,17 @@ const getDataUrlFormat = (value: string) =>
   value.startsWith("data:image/png") ? "PNG" : "JPEG";
 
 export const generatePPEDeliveryPdf = async ({
-  delivery,
+  items,
   employee,
-  ppe,
   company,
 }: GeneratePPEDeliveryPdfParams) => {
+  if (items.length === 0) {
+    return;
+  }
+
+  // Assinatura, foto e data são compartilhadas pelo lote (mesma entrega).
+  const primaryDelivery = items[0].delivery;
+
   const { doc, autoTable } = await createPdfDocument();
 
   doc.setFontSize(18);
@@ -61,15 +72,13 @@ export const generatePPEDeliveryPdf = async ({
   autoTable(doc, {
     startY: 90,
     head: [["EPI", "CA", "Qtd", "Data Entrega", "Motivo"]],
-    body: [
-      [
-        ppe.name,
-        ppe.ca,
-        delivery.quantity.toString(),
-        new Date(delivery.deliveryDate).toLocaleDateString("pt-BR"),
-        formatPPEDeliveryReason(delivery),
-      ],
-    ],
+    body: items.map(({ delivery, ppe }) => [
+      ppe.name,
+      ppe.ca,
+      delivery.quantity.toString(),
+      new Date(delivery.deliveryDate).toLocaleDateString("pt-BR"),
+      formatPPEDeliveryReason(delivery),
+    ]),
     theme: "grid",
     headStyles: {
       fillColor: [37, 99, 235],
@@ -102,7 +111,7 @@ export const generatePPEDeliveryPdf = async ({
     currentY = 24;
   };
 
-  if (delivery.employeeFacePhoto) {
+  if (primaryDelivery.employeeFacePhoto) {
     ensureSpace(92);
     doc.setFontSize(10);
     doc.setTextColor(15, 23, 42);
@@ -113,8 +122,8 @@ export const generatePPEDeliveryPdf = async ({
     doc.setFillColor(248, 250, 252);
     doc.rect(62, currentY + 6, 86, 68, "F");
     doc.addImage(
-      delivery.employeeFacePhoto,
-      getDataUrlFormat(delivery.employeeFacePhoto),
+      primaryDelivery.employeeFacePhoto,
+      getDataUrlFormat(primaryDelivery.employeeFacePhoto),
       76,
       currentY + 10,
       58,
@@ -123,11 +132,11 @@ export const generatePPEDeliveryPdf = async ({
       "FAST",
     );
 
-    if (delivery.facePhotoCapturedAt) {
+    if (primaryDelivery.facePhotoCapturedAt) {
       doc.setFontSize(9);
       doc.setTextColor(100, 116, 139);
       doc.text(
-        `Capturada em ${formatPPEDeliverySignedAt(delivery.facePhotoCapturedAt)}`,
+        `Capturada em ${formatPPEDeliverySignedAt(primaryDelivery.facePhotoCapturedAt)}`,
         105,
         currentY + 82,
         { align: "center" },
@@ -137,13 +146,13 @@ export const generatePPEDeliveryPdf = async ({
     currentY += 94;
   }
 
-  if (delivery.employeeSignature) {
+  if (primaryDelivery.employeeSignature) {
     ensureSpace(54);
     const signatureTop = currentY;
     doc.setFillColor(248, 250, 252);
     doc.rect(34, signatureTop - 16, 142, 34, "F");
     doc.addImage(
-      delivery.employeeSignature,
+      primaryDelivery.employeeSignature,
       "PNG",
       40,
       signatureTop - 12,
@@ -158,11 +167,11 @@ export const generatePPEDeliveryPdf = async ({
       align: "center",
     });
 
-    if (delivery.signedAt) {
+    if (primaryDelivery.signedAt) {
       doc.setFontSize(9);
       doc.setTextColor(100, 116, 139);
       doc.text(
-        `Capturada em ${formatPPEDeliverySignedAt(delivery.signedAt)}`,
+        `Capturada em ${formatPPEDeliverySignedAt(primaryDelivery.signedAt)}`,
         105,
         signatureTop + 32,
         { align: "center" },
@@ -183,6 +192,6 @@ export const generatePPEDeliveryPdf = async ({
   }
 
   doc.save(
-    `Ficha_EPI_${employee.name.replace(/\s+/g, "_")}_${delivery.deliveryDate}.pdf`,
+    `Ficha_EPI_${employee.name.replace(/\s+/g, "_")}_${primaryDelivery.deliveryDate}.pdf`,
   );
 };
