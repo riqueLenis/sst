@@ -25,6 +25,15 @@ import {
   generatePPEDeliveryPdf,
 } from "../lib/ppeDeliveryPdf";
 
+// Motivos em que o técnico escolhe manualmente quais EPIs entregar.
+// Na Admissão a entrega segue o fluxo padrão: o kit obrigatório do cargo.
+const REASONS_WITH_PPE_SELECTION = [
+  "Substituição",
+  "Perda/Extravio",
+  "Dano",
+  "Validade",
+];
+
 type DeliveryFormState = {
   employeeId: string;
   deliveryDate: string;
@@ -102,6 +111,13 @@ export default function PPEDeliveries() {
   });
   const otherAvailablePPEs = availablePPEs.filter(
     (ppe) => !requiredRolePpeIdSet.has(ppe.id),
+  );
+  // Admissão não exibe checkboxes: entrega o kit obrigatório do cargo.
+  const allowsPpeSelection = REASONS_WITH_PPE_SELECTION.includes(
+    formData.reason,
+  );
+  const admissionPPEs = requiredRolePPEs.filter(
+    (ppe) => ppe.id in selectedPpeQuantities,
   );
   const declarationText = selectedCompany
     ? buildPPEDeliveryDeclarationText(selectedCompany.name)
@@ -338,6 +354,16 @@ export default function PPEDeliveries() {
     }
   };
 
+  const handleReasonChange = (reason: string) => {
+    updateFormField("reason", reason);
+
+    // Ao voltar para Admissão, a seleção volta a ser o kit obrigatório do
+    // cargo (o técnico pode ter marcado/desmarcado itens em outro motivo).
+    if (!REASONS_WITH_PPE_SELECTION.includes(reason)) {
+      setSelectedPpeQuantities(buildDefaultSelection(formData.employeeId));
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -351,7 +377,11 @@ export default function PPEDeliveries() {
     let hasError = false;
 
     if (selectedPpeCount === 0) {
-      window.alert("Selecione pelo menos um EPI para registrar a entrega.");
+      window.alert(
+        allowsPpeSelection
+          ? "Selecione pelo menos um EPI para registrar a entrega."
+          : "O cargo deste colaborador não possui EPIs obrigatórios com estoque disponível. Vincule os EPIs ao cargo (ou reponha o estoque) para registrar a entrega de admissão.",
+      );
       hasError = true;
     }
 
@@ -899,6 +929,71 @@ export default function PPEDeliveries() {
                 </select>
               </div>
 
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1.5">
+                  Data da Entrega
+                </label>
+                <input
+                  type="date"
+                  required
+                  value={formData.deliveryDate}
+                  onChange={(e) =>
+                    updateFormField("deliveryDate", e.target.value)
+                  }
+                  className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1.5">
+                  Motivo
+                </label>
+                <select
+                  required
+                  value={formData.reason}
+                  onChange={(e) => handleReasonChange(e.target.value)}
+                  className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all bg-white"
+                >
+                  <option value="Admissão">Admissão</option>
+                  <option value="Substituição">Substituição</option>
+                  <option value="Perda/Extravio">Perda/Extravio</option>
+                  <option value="Dano">Dano</option>
+                  <option value="Validade">Validade</option>
+                </select>
+                <p className="mt-1.5 text-xs text-slate-500">
+                  {allowsPpeSelection
+                    ? "Selecione abaixo quais EPIs serão entregues."
+                    : "Entrega inicial: todos os EPIs obrigatórios do cargo com estoque são entregues automaticamente."}
+                </p>
+              </div>
+
+              {formData.reason === "Substituição" && (
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-1.5">
+                    Motivo da substituição
+                  </label>
+                  <textarea
+                    required
+                    rows={3}
+                    value={formData.replacementReason}
+                    onChange={(e) =>
+                      updateFormField("replacementReason", e.target.value)
+                    }
+                    className={`w-full rounded-xl border px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${
+                      replacementReasonError
+                        ? "border-red-300 bg-red-50/40"
+                        : "border-slate-200"
+                    }`}
+                    placeholder="Descreva o motivo da substituição"
+                  />
+                  {replacementReasonError && (
+                    <p className="mt-2 text-xs font-medium text-red-600">
+                      {replacementReasonError}
+                    </p>
+                  )}
+                </div>
+              )}
+
               {selectedEmployee && (
                 <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
                   <div className="grid gap-3 sm:grid-cols-3">
@@ -950,72 +1045,115 @@ export default function PPEDeliveries() {
 
                   {selectedRole ? (
                     requiredRolePPEs.length > 0 ? (
-                      <div className="mt-3 space-y-2">
-                        <p className="text-xs text-slate-500">
-                          Marque os EPIs a entregar. Por padrão, todos os
-                          obrigatórios com estoque já vêm selecionados.
-                        </p>
-                        {requiredRolePPEs.map((ppe) => {
-                          const isOutOfStock = ppe.stockQuantity <= 0;
-                          const isSelected = ppe.id in selectedPpeQuantities;
+                      !allowsPpeSelection ? (
+                        // Admissão: kit obrigatório do cargo, sem seleção manual.
+                        <div className="mt-3 space-y-2">
+                          <p className="text-xs text-slate-500">
+                            Entrega de admissão: os EPIs obrigatórios do cargo
+                            são entregues automaticamente.
+                          </p>
+                          {requiredRolePPEs.map((ppe) => {
+                            const isOutOfStock = ppe.stockQuantity <= 0;
 
-                          return (
-                            <label
-                              key={ppe.id}
-                              className={`flex items-center gap-3 rounded-xl border px-3 py-2.5 transition-colors ${
-                                isSelected
-                                  ? "border-blue-200 bg-blue-50"
-                                  : "border-slate-200 bg-white"
-                              } ${
-                                isOutOfStock
-                                  ? "cursor-not-allowed opacity-60"
-                                  : "cursor-pointer"
-                              }`}
-                            >
-                              <input
-                                type="checkbox"
-                                checked={isSelected}
-                                disabled={isOutOfStock}
-                                onChange={() => togglePpeSelection(ppe.id)}
-                                className="h-4 w-4 shrink-0 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-                              />
-                              <div className="min-w-0 flex-1">
-                                <p className="flex items-center gap-2 text-sm font-semibold text-slate-900">
-                                  <HardHat className="h-4 w-4 text-blue-600" />
-                                  {ppe.name}
-                                </p>
-                                <p className="mt-0.5 text-xs text-slate-500">
-                                  CA {ppe.ca} •{" "}
+                            return (
+                              <div
+                                key={ppe.id}
+                                className={`flex items-center gap-3 rounded-xl border px-3 py-2.5 ${
+                                  isOutOfStock
+                                    ? "border-slate-200 bg-white opacity-60"
+                                    : "border-blue-200 bg-blue-50"
+                                }`}
+                              >
+                                <div className="min-w-0 flex-1">
+                                  <p className="flex items-center gap-2 text-sm font-semibold text-slate-900">
+                                    <HardHat className="h-4 w-4 text-blue-600" />
+                                    {ppe.name}
+                                  </p>
+                                  <p className="mt-0.5 text-xs text-slate-500">
+                                    CA {ppe.ca} •{" "}
+                                    {isOutOfStock
+                                      ? "Sem estoque — não será entregue"
+                                      : `${ppe.stockQuantity} un em estoque`}
+                                  </p>
+                                </div>
+                                <span className="shrink-0 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-sm font-semibold text-slate-700">
                                   {isOutOfStock
-                                    ? "Sem estoque"
-                                    : `${ppe.stockQuantity} un em estoque`}
-                                </p>
+                                    ? "—"
+                                    : `${selectedPpeQuantities[ppe.id] ?? 1} un`}
+                                </span>
                               </div>
-                              {isSelected && !isOutOfStock && (
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <div className="mt-3 space-y-2">
+                          <p className="text-xs text-slate-500">
+                            Marque os EPIs a entregar. Por padrão, todos os
+                            obrigatórios com estoque já vêm selecionados.
+                          </p>
+                          {requiredRolePPEs.map((ppe) => {
+                            const isOutOfStock = ppe.stockQuantity <= 0;
+                            const isSelected = ppe.id in selectedPpeQuantities;
+
+                            return (
+                              <label
+                                key={ppe.id}
+                                className={`flex items-center gap-3 rounded-xl border px-3 py-2.5 transition-colors ${
+                                  isSelected
+                                    ? "border-blue-200 bg-blue-50"
+                                    : "border-slate-200 bg-white"
+                                } ${
+                                  isOutOfStock
+                                    ? "cursor-not-allowed opacity-60"
+                                    : "cursor-pointer"
+                                }`}
+                              >
                                 <input
-                                  type="number"
-                                  min="1"
-                                  max={ppe.stockQuantity}
-                                  value={selectedPpeQuantities[ppe.id]}
-                                  onClick={(event) => event.preventDefault()}
-                                  onChange={(event) =>
-                                    setPpeQuantity(
-                                      ppe.id,
-                                      parseInt(event.target.value, 10) || 1,
-                                    )
-                                  }
-                                  className="w-16 shrink-0 rounded-lg border border-slate-200 px-2 py-1.5 text-center text-sm"
-                                  aria-label={`Quantidade de ${ppe.name}`}
+                                  type="checkbox"
+                                  checked={isSelected}
+                                  disabled={isOutOfStock}
+                                  onChange={() => togglePpeSelection(ppe.id)}
+                                  className="h-4 w-4 shrink-0 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
                                 />
-                              )}
-                            </label>
-                          );
-                        })}
-                      </div>
+                                <div className="min-w-0 flex-1">
+                                  <p className="flex items-center gap-2 text-sm font-semibold text-slate-900">
+                                    <HardHat className="h-4 w-4 text-blue-600" />
+                                    {ppe.name}
+                                  </p>
+                                  <p className="mt-0.5 text-xs text-slate-500">
+                                    CA {ppe.ca} •{" "}
+                                    {isOutOfStock
+                                      ? "Sem estoque"
+                                      : `${ppe.stockQuantity} un em estoque`}
+                                  </p>
+                                </div>
+                                {isSelected && !isOutOfStock && (
+                                  <input
+                                    type="number"
+                                    min="1"
+                                    max={ppe.stockQuantity}
+                                    value={selectedPpeQuantities[ppe.id]}
+                                    onClick={(event) => event.preventDefault()}
+                                    onChange={(event) =>
+                                      setPpeQuantity(
+                                        ppe.id,
+                                        parseInt(event.target.value, 10) || 1,
+                                      )
+                                    }
+                                    className="w-16 shrink-0 rounded-lg border border-slate-200 px-2 py-1.5 text-center text-sm"
+                                    aria-label={`Quantidade de ${ppe.name}`}
+                                  />
+                                )}
+                              </label>
+                            );
+                          })}
+                        </div>
+                      )
                     ) : (
                       <p className="mt-3 text-sm text-slate-500">
-                        Nenhum EPI obrigatório está vinculado a este cargo. Use a
-                        lista abaixo para adicionar EPIs manualmente.
+                        {allowsPpeSelection
+                          ? "Nenhum EPI obrigatório está vinculado a este cargo. Use a lista abaixo para adicionar EPIs manualmente."
+                          : "Nenhum EPI obrigatório está vinculado a este cargo. Vincule os EPIs ao cargo em Setores & Cargos para registrar a entrega de admissão."}
                       </p>
                     )
                   ) : (
@@ -1027,7 +1165,7 @@ export default function PPEDeliveries() {
                 </div>
               )}
 
-              {otherAvailablePPEs.length > 0 && (
+              {allowsPpeSelection && otherAvailablePPEs.length > 0 && (
                 <div>
                   <label className="block text-sm font-semibold text-slate-700 mb-1.5">
                     Outros EPIs disponíveis{" "}
@@ -1085,70 +1223,14 @@ export default function PPEDeliveries() {
               )}
 
               <div className="rounded-xl border border-blue-100 bg-blue-50/60 px-4 py-2.5 text-sm font-medium text-blue-800">
-                {selectedPpeCount > 0
-                  ? `${selectedPpeCount} EPI(s) selecionado(s) para entrega.`
-                  : "Nenhum EPI selecionado ainda."}
+                {allowsPpeSelection
+                  ? selectedPpeCount > 0
+                    ? `${selectedPpeCount} EPI(s) selecionado(s) para entrega.`
+                    : "Nenhum EPI selecionado ainda."
+                  : admissionPPEs.length > 0
+                    ? `${admissionPPEs.length} EPI(s) obrigatório(s) do cargo serão entregues.`
+                    : "Nenhum EPI obrigatório com estoque disponível para este cargo."}
               </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1.5">
-                  Data da Entrega
-                </label>
-                <input
-                  type="date"
-                  required
-                  value={formData.deliveryDate}
-                  onChange={(e) =>
-                    updateFormField("deliveryDate", e.target.value)
-                  }
-                  className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1.5">
-                  Motivo
-                </label>
-                <select
-                  required
-                  value={formData.reason}
-                  onChange={(e) => updateFormField("reason", e.target.value)}
-                  className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all bg-white"
-                >
-                  <option value="Admissão">Admissão</option>
-                  <option value="Substituição">Substituição</option>
-                  <option value="Perda/Extravio">Perda/Extravio</option>
-                  <option value="Dano">Dano</option>
-                  <option value="Validade">Validade</option>
-                </select>
-              </div>
-
-              {formData.reason === "Substituição" && (
-                <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-1.5">
-                    Motivo da substituição
-                  </label>
-                  <textarea
-                    required
-                    rows={3}
-                    value={formData.replacementReason}
-                    onChange={(e) =>
-                      updateFormField("replacementReason", e.target.value)
-                    }
-                    className={`w-full rounded-xl border px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${
-                      replacementReasonError
-                        ? "border-red-300 bg-red-50/40"
-                        : "border-slate-200"
-                    }`}
-                    placeholder="Descreva o motivo da substituição"
-                  />
-                  {replacementReasonError && (
-                    <p className="mt-2 text-xs font-medium text-red-600">
-                      {replacementReasonError}
-                    </p>
-                  )}
-                </div>
-              )}
 
               <div className="rounded-2xl border border-blue-100 bg-blue-50/70 p-4">
                 <div className="flex items-start gap-3">
