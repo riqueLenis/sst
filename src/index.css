@@ -661,13 +661,15 @@ thead th {
 
 .mobile-nav-item {
   display: flex;
-  flex: 1 0 0;
+  /* min-width: 0 permite encolher: sem isso o rótulo estoura o item e
+     encosta no vizinho. */
+  flex: 1 1 0;
+  min-width: 0;
   align-items: center;
   justify-content: center;
   gap: 0.35rem;
   min-height: 3.3rem;
-  min-width: 4.4rem;
-  padding: 0.6rem;
+  padding: 0.6rem 0.45rem;
   border-radius: 1rem;
   color: var(--muted-soft);
   font-size: 0.72rem;
@@ -678,6 +680,18 @@ thead th {
     transform 180ms ease,
     background-color 180ms ease,
     color 180ms ease;
+}
+
+.mobile-nav-item svg {
+  flex-shrink: 0;
+}
+
+.mobile-nav-item span {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: center;
 }
 
 .mobile-nav-item-active {
@@ -1623,20 +1637,33 @@ thead th {
     grid-column: span 12 / span 12;
   }
 
+  /* Em telas estreitas o rótulo vai para baixo do ícone, em caixa normal:
+     maiúsculas com espaçamento não cabem e os textos se encostavam. */
   .mobile-nav-item {
     flex-direction: column;
     gap: 0.25rem;
-    min-width: 4rem;
-    font-size: 0.62rem;
-    letter-spacing: 0.04em;
+    padding: 0.5rem 0.3rem;
+    font-size: 0.66rem;
+    letter-spacing: 0;
+    text-transform: none;
   }
 
   .mobile-nav-item span {
-    line-height: 1;
+    line-height: 1.1;
   }
 }
 
 @media (max-width: 479px) {
+  .mobile-nav {
+    gap: 0.3rem;
+    padding: 0.45rem 0.4rem;
+  }
+
+  .mobile-nav-item {
+    padding: 0.5rem 0.2rem;
+    font-size: 0.64rem;
+  }
+
   .app-header {
     gap: 0.45rem;
   }

@@ -32,11 +32,14 @@ type NavItem = {
   path: string;
   icon: LucideIcon;
   description: string;
+  // Rótulo curto usado na barra inferior do mobile, onde o espaço é mínimo.
+  shortName?: string;
 };
 
 const navItems: NavItem[] = [
   {
     name: "Dashboard",
+    shortName: "Painel",
     path: "/",
     icon: LayoutDashboard,
     description: "Visão geral da operação.",
@@ -49,24 +52,28 @@ const navItems: NavItem[] = [
   },
   {
     name: "Setores & Cargos",
+    shortName: "Setores",
     path: "/setores",
     icon: Briefcase,
     description: "Estrutura e funções.",
   },
   {
     name: "Colaboradores",
+    shortName: "Equipe",
     path: "/colaboradores",
     icon: Users,
     description: "Pessoas e vínculos.",
   },
   {
     name: "Estoque de EPIs",
+    shortName: "EPIs",
     path: "/epis",
     icon: HardHat,
     description: "Catálogo e estoque.",
   },
   {
     name: "Entregas de EPI",
+    shortName: "Entregas",
     path: "/entregas",
     icon: ShieldCheck,
     description: "Entrega e devolução.",
@@ -79,12 +86,14 @@ const navItems: NavItem[] = [
   },
   {
     name: "Saúde Ocupacional",
+    shortName: "Saúde",
     path: "/saude",
     icon: Stethoscope,
     description: "ASOs e afastamentos.",
   },
   {
     name: "Programas e Laudos",
+    shortName: "Programas",
     path: "/programas",
     icon: FileSignature,
     description: "PGR, LTCAT e vigências.",
@@ -448,7 +457,7 @@ export default function Layout() {
               }
             >
               <item.icon className="h-4 w-4" />
-              <span>{item.name}</span>
+              <span>{item.shortName ?? item.name}</span>
             </NavLink>
           ))}
 
