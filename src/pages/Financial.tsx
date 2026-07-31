@@ -17,7 +17,12 @@ import {
   Trash2,
 } from "lucide-react";
 import { exportTableToPDF } from "../lib/pdfUtils";
-import { formatDate } from "../lib/dates";
+import {
+  formatDate,
+  getMonthKey,
+  isExpiredDate,
+  toLocalDate,
+} from "../lib/dates";
 import type { Transaction } from "../types";
 
 type TransactionFormState = Omit<Transaction, "id">;
@@ -110,12 +115,13 @@ export default function Financial() {
     }
     setIsSaving(true);
     try {
-      if (editingId) {
-        await updateTransaction(editingId, formData);
-      } else {
-        await addTransaction(formData);
+      const saved = editingId
+        ? await updateTransaction(editingId, formData)
+        : await addTransaction(formData);
+
+      if (saved) {
+        closeModal();
       }
-      closeModal();
     } finally {
       setIsSaving(false);
     }
@@ -291,8 +297,8 @@ export default function Financial() {
     transactions
       .filter((t) => t.status === "paid")
       .forEach((t) => {
-        const date = new Date(t.date);
-        const monthYear = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+        const date = toLocalDate(t.date) ?? new Date(t.date);
+        const monthYear = getMonthKey(t.date) ?? "";
         const monthName = date.toLocaleDateString("pt-BR", {
           month: "long",
           year: "numeric",
@@ -512,7 +518,7 @@ export default function Financial() {
                     const company = companies.find((c) => c.id === t.companyId);
                     const isOverdue =
                       t.status === "pending" &&
-                      new Date(t.dueDate) < new Date();
+                      isExpiredDate(t.dueDate);
 
                     return (
                       <tr

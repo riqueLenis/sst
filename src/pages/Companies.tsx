@@ -106,7 +106,7 @@ export default function Companies() {
         company.cnpj.replace(/\D/g, "").includes(searchDigits)),
   );
   const companiesWithContact = companies.filter(
-    (company) => company.contact.trim().length > 0,
+    (company) => (company.contact ?? "").trim().length > 0,
   ).length;
 
   const handleSubmit = async (event: React.FormEvent) => {
@@ -125,10 +125,12 @@ export default function Companies() {
         contact: formData.email.trim() || formData.phone.trim(),
       };
 
-      if (editingId) {
-        await updateCompany(editingId, payload);
-      } else {
-        await addCompany(payload);
+      const saved = editingId
+        ? await updateCompany(editingId, payload)
+        : await addCompany(payload);
+
+      if (!saved) {
+        return;
       }
 
       setIsModalOpen(false);

@@ -152,11 +152,14 @@ export default function PPEs() {
     setIsSaving(true);
 
     try {
-      if (editingId) {
-        await updatePPE(editingId, formData);
-      } else {
-        await addPPE(formData);
+      const saved = editingId
+        ? await updatePPE(editingId, formData)
+        : await addPPE(formData);
+
+      if (!saved) {
+        return;
       }
+
       setIsModalOpen(false);
       setFormData({
         name: "",
@@ -496,10 +499,10 @@ export default function PPEs() {
     const employeeUsage = new Map<
       string,
       {
+        employeeId: string;
         employeeName: string;
         totalQuantity: number;
         totalCost: number;
-        uniquePpeCount: number;
       }
     >();
 
@@ -514,18 +517,14 @@ export default function PPEs() {
       }
 
       const existingUsage = employeeUsage.get(employee.id) ?? {
+        employeeId: employee.id,
         employeeName: employee.name,
         totalQuantity: 0,
         totalCost: 0,
-        uniquePpeCount: 0,
       };
 
       existingUsage.totalQuantity += delivery.quantity;
       existingUsage.totalCost += delivery.quantity * getPpeUnitCost(ppe);
-
-      if (!employeeUsage.has(employee.id)) {
-        existingUsage.uniquePpeCount = 1;
-      }
 
       employeeUsage.set(employee.id, existingUsage);
     });
@@ -947,7 +946,7 @@ export default function PPEs() {
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {topConsumers.map((consumer) => (
-                  <tr key={consumer.employeeName} className="bg-white">
+                  <tr key={consumer.employeeId} className="bg-white">
                     <td className="px-6 py-4 font-semibold text-slate-900">
                       {consumer.employeeName}
                     </td>

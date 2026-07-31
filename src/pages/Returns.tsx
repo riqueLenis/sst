@@ -10,9 +10,8 @@ import {
 } from "lucide-react";
 import { useAppContext } from "../store/AppContext";
 import { exportTableToPDF } from "../lib/pdfUtils";
-import { formatDate, formatDateTime } from "../lib/dates";
+import { formatDate, formatDateTime, toLocalDate } from "../lib/dates";
 
-/** Hora da devolução; devoluções antigas não têm o horário registrado. */
 const formatReturnTime = (value?: string) => {
   if (!value) {
     return "—";
@@ -62,12 +61,13 @@ export default function Returns() {
         };
       })
       .sort((left, right) => {
-        const leftTime = new Date(
-          left.returnDate ?? left.delivery.deliveryDate,
-        ).getTime();
-        const rightTime = new Date(
-          right.returnDate ?? right.delivery.deliveryDate,
-        ).getTime();
+        const leftTime =
+          toLocalDate(left.returnDate ?? left.delivery.deliveryDate)?.getTime() ??
+          0;
+        const rightTime =
+          toLocalDate(
+            right.returnDate ?? right.delivery.deliveryDate,
+          )?.getTime() ?? 0;
 
         return rightTime - leftTime;
       });

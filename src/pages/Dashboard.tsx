@@ -24,7 +24,7 @@ import {
   YAxis,
 } from "recharts";
 import { useAppContext } from "../store/AppContext";
-import { formatDate } from "../lib/dates";
+import { formatDate, isExpiredDate, isSameMonth } from "../lib/dates";
 
 export default function Dashboard() {
   const [chartsReady, setChartsReady] = React.useState(false);
@@ -55,22 +55,17 @@ export default function Dashboard() {
   const expiredProgramsCount = documents.filter(
     (document) =>
       document.status === "expired" ||
-      new Date(document.validUntil) < new Date(),
+      isExpiredDate(document.validUntil),
   ).length;
   const expiredAsosCount = asos.filter(
-    (aso) => new Date(aso.validUntil) < new Date(),
+    (aso) => isExpiredDate(aso.validUntil),
   ).length;
   const pendingTransactionsCount = transactions.filter(
     (transaction) => transaction.status === "pending",
   ).length;
-  const deliveriesThisMonth = ppeDeliveries.filter((delivery) => {
-    const deliveryDate = new Date(delivery.deliveryDate);
-    const now = new Date();
-    return (
-      deliveryDate.getMonth() === now.getMonth() &&
-      deliveryDate.getFullYear() === now.getFullYear()
-    );
-  }).length;
+  const deliveriesThisMonth = ppeDeliveries.filter((delivery) =>
+    isSameMonth(delivery.deliveryDate),
+  ).length;
 
   const stats = [
     {

@@ -1,10 +1,4 @@
-// Regras de data usadas nos cadastros (idade mínima, limites de campos etc.).
-
-// Idade mínima permitida para cadastrar um colaborador (menor aprendiz a partir
-// de 16 anos, conforme art. 7º, XXXIII da CF/88).
 export const MIN_EMPLOYEE_AGE_YEARS = 16;
-
-// Limite superior apenas para evitar datas absurdas digitadas por engano.
 export const MAX_EMPLOYEE_AGE_YEARS = 100;
 
 const toDateOnly = (value: Date) =>
@@ -16,8 +10,6 @@ const toInputValue = (value: Date) => {
 
   return `${value.getFullYear()}-${month}-${day}`;
 };
-
-/** Converte "1990-05-10" (input date) em Date local, sem deslocamento de fuso. */
 export const parseDateInput = (value: string): Date | null => {
   if (!value) {
     return null;
@@ -34,10 +26,61 @@ export const parseDateInput = (value: string): Date | null => {
   return Number.isNaN(parsed.getTime()) ? null : parsed;
 };
 
-/**
- * Formata uma data vinda da API sem quebrar a tela quando o valor está ausente
- * ou inválido (o cadastro antigo pode não ter todos os campos preenchidos).
- */
+export const toLocalDate = (value?: string | null): Date | null => {
+  if (!value) {
+    return null;
+  }
+
+  const dateOnly = parseDateInput(value);
+
+  if (dateOnly) {
+    return dateOnly;
+  }
+
+  const parsed = new Date(value);
+
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+};
+
+export const isExpiredDate = (
+  value?: string | null,
+  referenceDate: Date = new Date(),
+): boolean => {
+  const parsed = toLocalDate(value);
+
+  if (!parsed) {
+    return false;
+  }
+
+  return toDateOnly(parsed).getTime() < toDateOnly(referenceDate).getTime();
+};
+
+export const isSameMonth = (
+  value?: string | null,
+  referenceDate: Date = new Date(),
+): boolean => {
+  const parsed = toLocalDate(value);
+
+  if (!parsed) {
+    return false;
+  }
+
+  return (
+    parsed.getMonth() === referenceDate.getMonth() &&
+    parsed.getFullYear() === referenceDate.getFullYear()
+  );
+};
+
+export const getMonthKey = (value?: string | null): string | null => {
+  const parsed = toLocalDate(value);
+
+  if (!parsed) {
+    return null;
+  }
+
+  return `${parsed.getFullYear()}-${`${parsed.getMonth() + 1}`.padStart(2, "0")}`;
+};
+
 export const formatDate = (value?: string | null, fallback = "—") => {
   if (!value) {
     return fallback;
@@ -52,7 +95,6 @@ export const formatDate = (value?: string | null, fallback = "—") => {
   return parsed.toLocaleDateString("pt-BR");
 };
 
-/** Idem, incluindo horário (usado em comprovantes e assinaturas). */
 export const formatDateTime = (value?: string | null, fallback = "—") => {
   if (!value) {
     return fallback;
@@ -70,7 +112,6 @@ export const formatDateTime = (value?: string | null, fallback = "—") => {
   });
 };
 
-/** Idade completa (em anos) na data de referência. */
 export const calculateAge = (
   birthDate: string,
   referenceDate: Date = new Date(),
@@ -95,7 +136,6 @@ export const calculateAge = (
   return age;
 };
 
-/** Maior data de nascimento aceita (hoje - idade mínima), pronta para input[type=date]. */
 export const getMaxBirthDateInput = (referenceDate: Date = new Date()) => {
   const reference = toDateOnly(referenceDate);
 
@@ -108,7 +148,6 @@ export const getMaxBirthDateInput = (referenceDate: Date = new Date()) => {
   );
 };
 
-/** Menor data de nascimento aceita (hoje - idade máxima), pronta para input[type=date]. */
 export const getMinBirthDateInput = (referenceDate: Date = new Date()) => {
   const reference = toDateOnly(referenceDate);
 
@@ -121,10 +160,6 @@ export const getMinBirthDateInput = (referenceDate: Date = new Date()) => {
   );
 };
 
-/**
- * Valida a data de nascimento do colaborador.
- * Retorna a mensagem de erro ou null quando a data é aceita.
- */
 export const validateBirthDate = (
   birthDate: string,
   referenceDate: Date = new Date(),

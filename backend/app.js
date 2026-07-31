@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import cors from "cors";
 import express from "express";
+import rateLimit from "express-rate-limit";
 import helmet from "helmet";
 import hpp from "hpp";
 import { env } from "./config/env.js";
@@ -77,6 +78,39 @@ const createCorsOptions = () => ({
   },
   credentials: true,
 });
+
+const createApiRateLimiter = () =>
+  rateLimit({
+    windowMs: env.rateLimitWindowMs,
+    max: env.rateLimitMax,
+    standardHeaders: true,
+    legacyHeaders: false,
+    handler: (_req, _res, next) => {
+      next(
+        new HttpError(
+          429,
+          "Muitas requisições em pouco tempo. Aguarde alguns instantes e tente novamente.",
+        ),
+      );
+    },
+  });
+
+const createLoginRateLimiter = () =>
+  rateLimit({
+    windowMs: env.rateLimitWindowMs,
+    max: Math.max(5, Math.ceil(env.rateLimitMax / 20)),
+    standardHeaders: true,
+    legacyHeaders: false,
+    skipSuccessfulRequests: true,
+    handler: (_req, _res, next) => {
+      next(
+        new HttpError(
+          429,
+          "Muitas tentativas de login. Aguarde alguns minutos antes de tentar novamente.",
+        ),
+      );
+    },
+  });
 
 const setSensitiveResponseHeaders = (_req, res, next) => {
   res.setHeader(
@@ -173,11 +207,13 @@ export const createApp = async () => {
     });
   });
 
-  app.use("/api/auth", setSensitiveResponseHeaders);
+  app.use("/api/auth/login", createLoginRateLimiter());
+  app.use("/api/auth", setSensitiveResponseHeaders, createApiRateLimiter());
   app.use("/api/auth", createAuthRouter(authService));
   app.use(
     "/api",
     setSensitiveResponseHeaders,
+    createApiRateLimiter(),
     authenticate(authService),
     createApiRouter(store),
   );

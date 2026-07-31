@@ -43,49 +43,49 @@ interface AppContextType extends AppState {
   isMutating: boolean;
   error: string | null;
   refreshData: () => Promise<void>;
-  addCompany: (company: Omit<Company, "id">) => Promise<void>;
-  updateCompany: (id: string, company: Partial<Company>) => Promise<void>;
-  deleteCompany: (id: string) => Promise<void>;
+  addCompany: (company: Omit<Company, "id">) => Promise<boolean>;
+  updateCompany: (id: string, company: Partial<Company>) => Promise<boolean>;
+  deleteCompany: (id: string) => Promise<boolean>;
 
-  addSector: (sector: Omit<Sector, "id">) => Promise<void>;
-  updateSector: (id: string, sector: Partial<Sector>) => Promise<void>;
-  deleteSector: (id: string) => Promise<void>;
+  addSector: (sector: Omit<Sector, "id">) => Promise<boolean>;
+  updateSector: (id: string, sector: Partial<Sector>) => Promise<boolean>;
+  deleteSector: (id: string) => Promise<boolean>;
 
-  addRole: (role: Omit<Role, "id">) => Promise<void>;
-  updateRole: (id: string, role: Partial<Role>) => Promise<void>;
-  deleteRole: (id: string) => Promise<void>;
+  addRole: (role: Omit<Role, "id">) => Promise<boolean>;
+  updateRole: (id: string, role: Partial<Role>) => Promise<boolean>;
+  deleteRole: (id: string) => Promise<boolean>;
 
-  addEmployee: (employee: Omit<Employee, "id">) => Promise<void>;
-  updateEmployee: (id: string, employee: Partial<Employee>) => Promise<void>;
-  deleteEmployee: (id: string) => Promise<void>;
+  addEmployee: (employee: Omit<Employee, "id">) => Promise<boolean>;
+  updateEmployee: (id: string, employee: Partial<Employee>) => Promise<boolean>;
+  deleteEmployee: (id: string) => Promise<boolean>;
 
-  addPPE: (ppe: Omit<PPE, "id">) => Promise<void>;
-  updatePPE: (id: string, ppe: Partial<PPE>) => Promise<void>;
-  deletePPE: (id: string) => Promise<void>;
+  addPPE: (ppe: Omit<PPE, "id">) => Promise<boolean>;
+  updatePPE: (id: string, ppe: Partial<PPE>) => Promise<boolean>;
+  deletePPE: (id: string) => Promise<boolean>;
 
-  addPPEDelivery: (delivery: Omit<PPEDelivery, "id">) => Promise<void>;
-  addPPEDeliveries: (deliveries: Array<Omit<PPEDelivery, "id">>) => Promise<void>;
-  updatePPEDelivery: (id: string, delivery: Partial<PPEDelivery>) => Promise<void>;
+  addPPEDelivery: (delivery: Omit<PPEDelivery, "id">) => Promise<boolean>;
+  addPPEDeliveries: (deliveries: Array<Omit<PPEDelivery, "id">>) => Promise<boolean>;
+  updatePPEDelivery: (id: string, delivery: Partial<PPEDelivery>) => Promise<boolean>;
 
-  addTransaction: (transaction: Omit<Transaction, "id">) => Promise<void>;
-  updateTransaction: (id: string, transaction: Partial<Transaction>) => Promise<void>;
-  deleteTransaction: (id: string) => Promise<void>;
+  addTransaction: (transaction: Omit<Transaction, "id">) => Promise<boolean>;
+  updateTransaction: (id: string, transaction: Partial<Transaction>) => Promise<boolean>;
+  deleteTransaction: (id: string) => Promise<boolean>;
 
-  addDocument: (document: Omit<SSTDocument, "id">) => Promise<void>;
-  updateDocument: (id: string, document: Partial<SSTDocument>) => Promise<void>;
-  deleteDocument: (id: string) => Promise<void>;
+  addDocument: (document: Omit<SSTDocument, "id">) => Promise<boolean>;
+  updateDocument: (id: string, document: Partial<SSTDocument>) => Promise<boolean>;
+  deleteDocument: (id: string) => Promise<boolean>;
 
-  addASO: (aso: Omit<ASO, "id">) => Promise<void>;
-  updateASO: (id: string, aso: Partial<ASO>) => Promise<void>;
-  deleteASO: (id: string) => Promise<void>;
+  addASO: (aso: Omit<ASO, "id">) => Promise<boolean>;
+  updateASO: (id: string, aso: Partial<ASO>) => Promise<boolean>;
+  deleteASO: (id: string) => Promise<boolean>;
 
-  addAbsence: (absence: Omit<Absence, "id">) => Promise<void>;
-  updateAbsence: (id: string, absence: Partial<Absence>) => Promise<void>;
-  deleteAbsence: (id: string) => Promise<void>;
+  addAbsence: (absence: Omit<Absence, "id">) => Promise<boolean>;
+  updateAbsence: (id: string, absence: Partial<Absence>) => Promise<boolean>;
+  deleteAbsence: (id: string) => Promise<boolean>;
 
-  addReferral: (referral: Omit<MedicalReferral, "id">) => Promise<void>;
-  updateReferral: (id: string, referral: Partial<MedicalReferral>) => Promise<void>;
-  deleteReferral: (id: string) => Promise<void>;
+  addReferral: (referral: Omit<MedicalReferral, "id">) => Promise<boolean>;
+  updateReferral: (id: string, referral: Partial<MedicalReferral>) => Promise<boolean>;
+  deleteReferral: (id: string) => Promise<boolean>;
 }
 
 const initialState: AppState = {
@@ -212,10 +212,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
   }, [refreshData]);
 
   const runMutation = useCallback(
-    async (operation: () => Promise<unknown>) => {
+    async (operation: () => Promise<unknown>): Promise<boolean> => {
       if (!token) {
         logout();
-        return;
+        return false;
       }
 
       setIsMutating(true);
@@ -223,13 +223,15 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
       try {
         await operation();
         await refreshData({ silent: true });
+        return true;
       } catch (currentError) {
         if (handleUnauthorized(currentError)) {
-          return;
+          return false;
         }
 
         console.error(currentError);
         window.alert(getApiErrorMessage(currentError));
+        return false;
       } finally {
         setIsMutating(false);
       }
@@ -239,14 +241,14 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
 
   const addCompany = useCallback(
     async (company: Omit<Company, "id">) => {
-      await runMutation(() => apiClient.post(resourcePaths.companies, company, { token }));
+      return runMutation(() => apiClient.post(resourcePaths.companies, company, { token }));
     },
     [runMutation, token],
   );
 
   const updateCompany = useCallback(
     async (id: string, company: Partial<Company>) => {
-      await runMutation(() =>
+      return runMutation(() =>
         apiClient.patch(`${resourcePaths.companies}/${id}`, company, { token }),
       );
     },
@@ -255,63 +257,63 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
 
   const deleteCompany = useCallback(
     async (id: string) => {
-      await runMutation(() => apiClient.delete(`${resourcePaths.companies}/${id}`, { token }));
+      return runMutation(() => apiClient.delete(`${resourcePaths.companies}/${id}`, { token }));
     },
     [runMutation, token],
   );
 
   const addSector = useCallback(
     async (sector: Omit<Sector, "id">) => {
-      await runMutation(() => apiClient.post(resourcePaths.sectors, sector, { token }));
+      return runMutation(() => apiClient.post(resourcePaths.sectors, sector, { token }));
     },
     [runMutation, token],
   );
 
   const updateSector = useCallback(
     async (id: string, sector: Partial<Sector>) => {
-      await runMutation(() => apiClient.patch(`${resourcePaths.sectors}/${id}`, sector, { token }));
+      return runMutation(() => apiClient.patch(`${resourcePaths.sectors}/${id}`, sector, { token }));
     },
     [runMutation, token],
   );
 
   const deleteSector = useCallback(
     async (id: string) => {
-      await runMutation(() => apiClient.delete(`${resourcePaths.sectors}/${id}`, { token }));
+      return runMutation(() => apiClient.delete(`${resourcePaths.sectors}/${id}`, { token }));
     },
     [runMutation, token],
   );
 
   const addRole = useCallback(
     async (role: Omit<Role, "id">) => {
-      await runMutation(() => apiClient.post(resourcePaths.roles, role, { token }));
+      return runMutation(() => apiClient.post(resourcePaths.roles, role, { token }));
     },
     [runMutation, token],
   );
 
   const updateRole = useCallback(
     async (id: string, role: Partial<Role>) => {
-      await runMutation(() => apiClient.patch(`${resourcePaths.roles}/${id}`, role, { token }));
+      return runMutation(() => apiClient.patch(`${resourcePaths.roles}/${id}`, role, { token }));
     },
     [runMutation, token],
   );
 
   const deleteRole = useCallback(
     async (id: string) => {
-      await runMutation(() => apiClient.delete(`${resourcePaths.roles}/${id}`, { token }));
+      return runMutation(() => apiClient.delete(`${resourcePaths.roles}/${id}`, { token }));
     },
     [runMutation, token],
   );
 
   const addEmployee = useCallback(
     async (employee: Omit<Employee, "id">) => {
-      await runMutation(() => apiClient.post(resourcePaths.employees, employee, { token }));
+      return runMutation(() => apiClient.post(resourcePaths.employees, employee, { token }));
     },
     [runMutation, token],
   );
 
   const updateEmployee = useCallback(
     async (id: string, employee: Partial<Employee>) => {
-      await runMutation(() =>
+      return runMutation(() =>
         apiClient.patch(`${resourcePaths.employees}/${id}`, employee, { token }),
       );
     },
@@ -320,35 +322,35 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
 
   const deleteEmployee = useCallback(
     async (id: string) => {
-      await runMutation(() => apiClient.delete(`${resourcePaths.employees}/${id}`, { token }));
+      return runMutation(() => apiClient.delete(`${resourcePaths.employees}/${id}`, { token }));
     },
     [runMutation, token],
   );
 
   const addPPE = useCallback(
     async (ppe: Omit<PPE, "id">) => {
-      await runMutation(() => apiClient.post(resourcePaths.ppes, ppe, { token }));
+      return runMutation(() => apiClient.post(resourcePaths.ppes, ppe, { token }));
     },
     [runMutation, token],
   );
 
   const updatePPE = useCallback(
     async (id: string, ppe: Partial<PPE>) => {
-      await runMutation(() => apiClient.patch(`${resourcePaths.ppes}/${id}`, ppe, { token }));
+      return runMutation(() => apiClient.patch(`${resourcePaths.ppes}/${id}`, ppe, { token }));
     },
     [runMutation, token],
   );
 
   const deletePPE = useCallback(
     async (id: string) => {
-      await runMutation(() => apiClient.delete(`${resourcePaths.ppes}/${id}`, { token }));
+      return runMutation(() => apiClient.delete(`${resourcePaths.ppes}/${id}`, { token }));
     },
     [runMutation, token],
   );
 
   const addPPEDelivery = useCallback(
     async (delivery: Omit<PPEDelivery, "id">) => {
-      await runMutation(() =>
+      return runMutation(() =>
         apiClient.post(resourcePaths.ppeDeliveries, delivery, { token }),
       );
     },
@@ -357,7 +359,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
 
   const addPPEDeliveries = useCallback(
     async (deliveries: Array<Omit<PPEDelivery, "id">>) => {
-      await runMutation(async () => {
+      return runMutation(async () => {
         // Registra cada EPI do lote em sequência; um único refresh acontece
         // ao final (dentro do runMutation).
         for (const delivery of deliveries) {
@@ -370,7 +372,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
 
   const updatePPEDelivery = useCallback(
     async (id: string, delivery: Partial<PPEDelivery>) => {
-      await runMutation(() =>
+      return runMutation(() =>
         apiClient.patch(`${resourcePaths.ppeDeliveries}/${id}`, delivery, { token }),
       );
     },
@@ -379,7 +381,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
 
   const addTransaction = useCallback(
     async (transaction: Omit<Transaction, "id">) => {
-      await runMutation(() =>
+      return runMutation(() =>
         apiClient.post(resourcePaths.transactions, transaction, { token }),
       );
     },
@@ -388,7 +390,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
 
   const updateTransaction = useCallback(
     async (id: string, transaction: Partial<Transaction>) => {
-      await runMutation(() =>
+      return runMutation(() =>
         apiClient.patch(`${resourcePaths.transactions}/${id}`, transaction, {
           token,
         }),
@@ -399,21 +401,21 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
 
   const deleteTransaction = useCallback(
     async (id: string) => {
-      await runMutation(() => apiClient.delete(`${resourcePaths.transactions}/${id}`, { token }));
+      return runMutation(() => apiClient.delete(`${resourcePaths.transactions}/${id}`, { token }));
     },
     [runMutation, token],
   );
 
   const addDocument = useCallback(
     async (document: Omit<SSTDocument, "id">) => {
-      await runMutation(() => apiClient.post(resourcePaths.documents, document, { token }));
+      return runMutation(() => apiClient.post(resourcePaths.documents, document, { token }));
     },
     [runMutation, token],
   );
 
   const updateDocument = useCallback(
     async (id: string, document: Partial<SSTDocument>) => {
-      await runMutation(() =>
+      return runMutation(() =>
         apiClient.patch(`${resourcePaths.documents}/${id}`, document, { token }),
       );
     },
@@ -422,63 +424,63 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
 
   const deleteDocument = useCallback(
     async (id: string) => {
-      await runMutation(() => apiClient.delete(`${resourcePaths.documents}/${id}`, { token }));
+      return runMutation(() => apiClient.delete(`${resourcePaths.documents}/${id}`, { token }));
     },
     [runMutation, token],
   );
 
   const addASO = useCallback(
     async (aso: Omit<ASO, "id">) => {
-      await runMutation(() => apiClient.post(resourcePaths.asos, aso, { token }));
+      return runMutation(() => apiClient.post(resourcePaths.asos, aso, { token }));
     },
     [runMutation, token],
   );
 
   const updateASO = useCallback(
     async (id: string, aso: Partial<ASO>) => {
-      await runMutation(() => apiClient.patch(`${resourcePaths.asos}/${id}`, aso, { token }));
+      return runMutation(() => apiClient.patch(`${resourcePaths.asos}/${id}`, aso, { token }));
     },
     [runMutation, token],
   );
 
   const deleteASO = useCallback(
     async (id: string) => {
-      await runMutation(() => apiClient.delete(`${resourcePaths.asos}/${id}`, { token }));
+      return runMutation(() => apiClient.delete(`${resourcePaths.asos}/${id}`, { token }));
     },
     [runMutation, token],
   );
 
   const addAbsence = useCallback(
     async (absence: Omit<Absence, "id">) => {
-      await runMutation(() => apiClient.post(resourcePaths.absences, absence, { token }));
+      return runMutation(() => apiClient.post(resourcePaths.absences, absence, { token }));
     },
     [runMutation, token],
   );
 
   const updateAbsence = useCallback(
     async (id: string, absence: Partial<Absence>) => {
-      await runMutation(() => apiClient.patch(`${resourcePaths.absences}/${id}`, absence, { token }));
+      return runMutation(() => apiClient.patch(`${resourcePaths.absences}/${id}`, absence, { token }));
     },
     [runMutation, token],
   );
 
   const deleteAbsence = useCallback(
     async (id: string) => {
-      await runMutation(() => apiClient.delete(`${resourcePaths.absences}/${id}`, { token }));
+      return runMutation(() => apiClient.delete(`${resourcePaths.absences}/${id}`, { token }));
     },
     [runMutation, token],
   );
 
   const addReferral = useCallback(
     async (referral: Omit<MedicalReferral, "id">) => {
-      await runMutation(() => apiClient.post(resourcePaths.referrals, referral, { token }));
+      return runMutation(() => apiClient.post(resourcePaths.referrals, referral, { token }));
     },
     [runMutation, token],
   );
 
   const updateReferral = useCallback(
     async (id: string, referral: Partial<MedicalReferral>) => {
-      await runMutation(() =>
+      return runMutation(() =>
         apiClient.patch(`${resourcePaths.referrals}/${id}`, referral, { token }),
       );
     },
@@ -487,7 +489,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
 
   const deleteReferral = useCallback(
     async (id: string) => {
-      await runMutation(() => apiClient.delete(`${resourcePaths.referrals}/${id}`, { token }));
+      return runMutation(() => apiClient.delete(`${resourcePaths.referrals}/${id}`, { token }));
     },
     [runMutation, token],
   );

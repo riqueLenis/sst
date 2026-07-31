@@ -42,6 +42,7 @@ export default function SignaturePad({
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const drawingRef = useRef(false);
   const lastPointRef = useRef<Point | null>(null);
+  const lastCommittedValueRef = useRef<string | null>(null);
 
   const getContext = useCallback(() => {
     const canvas = canvasRef.current;
@@ -109,8 +110,12 @@ export default function SignaturePad({
   }, [getContext, prepareCanvas, value]);
 
   useEffect(() => {
+    if (value && value === lastCommittedValueRef.current) {
+      return;
+    }
+
     redrawSignature();
-  }, [redrawSignature]);
+  }, [redrawSignature, value]);
 
   const commitSignature = useCallback(() => {
     const canvas = canvasRef.current;
@@ -118,7 +123,9 @@ export default function SignaturePad({
       return;
     }
 
-    onChange(canvas.toDataURL("image/png"));
+    const signature = canvas.toDataURL("image/png");
+    lastCommittedValueRef.current = signature;
+    onChange(signature);
   }, [onChange]);
 
   const handlePointerDown = (event: React.PointerEvent<HTMLCanvasElement>) => {
@@ -184,6 +191,7 @@ export default function SignaturePad({
   const handleClear = () => {
     drawingRef.current = false;
     lastPointRef.current = null;
+    lastCommittedValueRef.current = null;
     prepareCanvas();
     onClear();
   };

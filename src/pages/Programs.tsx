@@ -14,7 +14,7 @@ import {
   ShieldAlert,
 } from "lucide-react";
 import { exportTableToPDF } from "../lib/pdfUtils";
-import { formatDate } from "../lib/dates";
+import { formatDate, isExpiredDate } from "../lib/dates";
 import type { SSTDocument } from "../types";
 
 export default function Programs() {
@@ -75,12 +75,13 @@ export default function Programs() {
     }
     setIsSaving(true);
     try {
-      if (editingId) {
-        await updateDocument(editingId, formData);
-      } else {
-        await addDocument(formData);
+      const saved = editingId
+        ? await updateDocument(editingId, formData)
+        : await addDocument(formData);
+
+      if (saved) {
+        closeModal();
       }
-      closeModal();
     } finally {
       setIsSaving(false);
     }
@@ -125,7 +126,7 @@ export default function Programs() {
     ];
     const data = filteredDocuments.map((d) => {
       const company = companies.find((c) => c.id === d.companyId);
-      const isExpired = new Date(d.validUntil) < new Date();
+      const isExpired = isExpiredDate(d.validUntil);
 
       let adicionais = [];
       if (d.hasInsalubrity) adicionais.push("Insalubridade");
@@ -166,10 +167,10 @@ export default function Programs() {
 
   // Metrics
   const activeDocs = documents.filter(
-    (d) => d.status === "active" && new Date(d.validUntil) >= new Date(),
+    (d) => d.status === "active" && !isExpiredDate(d.validUntil),
   ).length;
   const expiredDocs = documents.filter(
-    (d) => d.status === "expired" || new Date(d.validUntil) < new Date(),
+    (d) => d.status === "expired" || isExpiredDate(d.validUntil),
   ).length;
   const docsWithAditionals = documents.filter(
     (d) => d.hasInsalubrity || d.hasPericulosity,
@@ -275,7 +276,7 @@ export default function Programs() {
             <tbody className="divide-y divide-slate-100">
               {filteredDocuments.map((doc) => {
                 const company = companies.find((c) => c.id === doc.companyId);
-                const isExpired = new Date(doc.validUntil) < new Date();
+                const isExpired = isExpiredDate(doc.validUntil);
                 const status = isExpired ? "expired" : doc.status;
 
                 return (

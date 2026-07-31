@@ -17,7 +17,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { exportTableToPDF } from "../lib/pdfUtils";
-import { formatDate } from "../lib/dates";
+import { formatDate, isExpiredDate } from "../lib/dates";
 import type { ASO, Absence, MedicalReferral } from "../types";
 
 export default function OccupationalHealth() {
@@ -170,29 +170,37 @@ export default function OccupationalHealth() {
     }
     setIsSaving(true);
     try {
+      let saved = false;
+
       if (activeTab === "asos") {
-        if (editingId) {
-          await updateASO(editingId, asoData);
-        } else {
-          await addASO(asoData);
+        saved = editingId
+          ? await updateASO(editingId, asoData)
+          : await addASO(asoData);
+
+        if (saved) {
+          setAsoData(asoInitialState);
         }
-        setAsoData(asoInitialState);
       } else if (activeTab === "absences") {
-        if (editingId) {
-          await updateAbsence(editingId, absenceData);
-        } else {
-          await addAbsence(absenceData);
+        saved = editingId
+          ? await updateAbsence(editingId, absenceData)
+          : await addAbsence(absenceData);
+
+        if (saved) {
+          setAbsenceData(absenceInitialState);
         }
-        setAbsenceData(absenceInitialState);
       } else if (activeTab === "referrals") {
-        if (editingId) {
-          await updateReferral(editingId, referralData);
-        } else {
-          await addReferral(referralData);
+        saved = editingId
+          ? await updateReferral(editingId, referralData)
+          : await addReferral(referralData);
+
+        if (saved) {
+          setReferralData(referralInitialState);
         }
-        setReferralData(referralInitialState);
       }
-      closeModal();
+
+      if (saved) {
+        closeModal();
+      }
     } finally {
       setIsSaving(false);
     }
@@ -252,7 +260,7 @@ export default function OccupationalHealth() {
         {
           label: "Vencidos",
           value: String(
-            filteredASOs.filter((aso) => new Date(aso.validUntil) < new Date())
+            filteredASOs.filter((aso) => isExpiredDate(aso.validUntil))
               .length,
           ),
         },
@@ -391,7 +399,7 @@ export default function OccupationalHealth() {
     (a) => a.status === "active",
   ).length;
   const expiredASOsCount = asos.filter(
-    (a) => new Date(a.validUntil) < new Date(),
+    (a) => isExpiredDate(a.validUntil),
   ).length;
   const pendingReferralsCount = referrals.filter(
     (r) => r.status === "pending",
@@ -549,7 +557,7 @@ export default function OccupationalHealth() {
                     const employee = employees.find(
                       (e) => e.id === a.employeeId,
                     );
-                    const isExpired = new Date(a.validUntil) < new Date();
+                    const isExpired = isExpiredDate(a.validUntil);
                     return (
                       <tr
                         key={a.id}

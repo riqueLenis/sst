@@ -111,10 +111,12 @@ export default function Employees() {
           formData.status === "inactive" ? formData.dismissalNotes : "",
       };
 
-      if (editingId) {
-        await updateEmployee(editingId, payload);
-      } else {
-        await addEmployee(payload);
+      const saved = editingId
+        ? await updateEmployee(editingId, payload)
+        : await addEmployee(payload);
+        
+      if (!saved) {
+        return;
       }
 
       setIsModalOpen(false);
@@ -565,7 +567,7 @@ export default function Employees() {
 
               {filteredEmployees.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-6 py-14">
+                  <td colSpan={7} className="px-6 py-14">
                     <div className="empty-state">
                       <Users className="h-12 w-12 text-slate-300" />
                       <p className="empty-state-title">

@@ -461,8 +461,11 @@ export default function PPEDeliveries() {
         }),
       );
 
-      await addPPEDeliveries(deliveries);
-      closeModal();
+      const saved = await addPPEDeliveries(deliveries);
+
+      if (saved) {
+        closeModal();
+      }
     } finally {
       setIsSaving(false);
     }
@@ -502,13 +505,16 @@ export default function PPEDeliveries() {
     setIsReturning(true);
 
     try {
-      await updatePPEDelivery(returnTarget.id, {
+      const saved = await updatePPEDelivery(returnTarget.id, {
         status: "returned",
         returnDate: now.toISOString().split("T")[0],
         returnedAt: now.toISOString(),
         returnReason,
       });
-      closeReturnModal();
+
+      if (saved) {
+        closeReturnModal();
+      }
     } finally {
       setIsReturning(false);
     }

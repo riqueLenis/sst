@@ -95,11 +95,14 @@ export default function Sectors() {
     }
     setIsSavingSector(true);
     try {
-      if (editingSectorId) {
-        await updateSector(editingSectorId, sectorFormData);
-      } else {
-        await addSector(sectorFormData);
+      const saved = editingSectorId
+        ? await updateSector(editingSectorId, sectorFormData)
+        : await addSector(sectorFormData);
+
+      if (!saved) {
+        return;
       }
+
       setIsSectorModalOpen(false);
       setSectorFormData({ name: "", description: "" });
       setEditingSectorId(null);
@@ -115,11 +118,14 @@ export default function Sectors() {
     }
     setIsSavingRole(true);
     try {
-      if (editingRoleId) {
-        await updateRole(editingRoleId, roleFormData);
-      } else {
-        await addRole(roleFormData);
+      const saved = editingRoleId
+        ? await updateRole(editingRoleId, roleFormData)
+        : await addRole(roleFormData);
+
+      if (!saved) {
+        return;
       }
+
       setIsRoleModalOpen(false);
       setRoleFormData({
         name: "",

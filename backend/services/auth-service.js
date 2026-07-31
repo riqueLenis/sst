@@ -279,6 +279,7 @@ export class AuthService {
 
       const payload = assertJwtPayload(
         jwt.verify(token, env.jwtSecret, {
+          algorithms: [JWT_ALGORITHM],
           issuer: "sst-backend",
           audience: "sst-frontend",
         }),
