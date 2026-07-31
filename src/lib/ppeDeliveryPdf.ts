@@ -1,11 +1,22 @@
-import { createPdfDocument } from "./pdfUtils";
+import {
+  PDF_COLORS,
+  buildTableOptions,
+  createBrandedPdf,
+  drawInfoCards,
+  drawIntro,
+  drawNoteBox,
+  drawSectionTitle,
+  ensureSpace,
+  formatPdfDate,
+  formatPdfDateTime,
+  getLastTableBottom,
+  savePdf,
+  type PdfContext,
+} from "./pdfTheme";
 import type { Company, Employee, PPE, PPEDelivery } from "../types";
 
 export const formatPPEDeliverySignedAt = (value: string) =>
-  new Date(value).toLocaleString("pt-BR", {
-    dateStyle: "short",
-    timeStyle: "short",
-  });
+  formatPdfDateTime(value);
 
 export const buildPPEDeliveryDeclarationText = (companyName: string) =>
   `Declaro ter recebido da empresa ${companyName} os Equipamentos de Proteção Individual (EPI) constantes nesta ficha, comprometendo-me a usá-los apenas para a finalidade a que se destinam, responsabilizando-me por sua guarda e conservação, e a comunicar qualquer alteração que os torne impróprios para uso.`;
@@ -33,15 +44,114 @@ type GeneratePPEDeliveryPdfParams = {
   items: PPEDeliveryItem[];
   employee: Employee;
   company: Company;
+  /** Cargo do colaborador, quando disponível na tela que gera a ficha. */
+  roleName?: string;
 };
 
 const getDataUrlFormat = (value: string) =>
   value.startsWith("data:image/png") ? "PNG" : "JPEG";
 
+type ProofBox = {
+  title: string;
+  image?: string;
+  caption?: string;
+  placeholder?: string;
+};
+
+/** Caixa de comprovação (foto facial / assinatura digital). */
+const drawProofBox = (
+  ctx: PdfContext,
+  box: ProofBox,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+) => {
+  const { doc } = ctx;
+
+  doc.setFillColor(...PDF_COLORS.surface);
+  doc.setDrawColor(...PDF_COLORS.line);
+  doc.setLineWidth(0.2);
+  doc.roundedRect(x, y, width, height, 3, 3, "FD");
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(7.2);
+  doc.setTextColor(...PDF_COLORS.brand);
+  doc.setCharSpace(0.4);
+  doc.text(box.title.toUpperCase(), x + 5, y + 6.6);
+  doc.setCharSpace(0);
+
+  const frameTop = y + 10;
+  const frameHeight = height - 20;
+  const frameWidth = width - 10;
+
+  doc.setFillColor(...PDF_COLORS.white);
+  doc.setDrawColor(...PDF_COLORS.line);
+  doc.roundedRect(x + 5, frameTop, frameWidth, frameHeight, 2.2, 2.2, "FD");
+
+  const drawPlaceholder = (message: string) => {
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8);
+    doc.setTextColor(...PDF_COLORS.mutedSoft);
+    doc.text(message, x + width / 2, frameTop + frameHeight / 2, {
+      align: "center",
+    });
+  };
+
+  if (box.image) {
+    const inset = 3;
+    const availableWidth = frameWidth - inset * 2;
+    const availableHeight = frameHeight - inset * 2;
+
+    // Mantém a proporção original da foto/assinatura dentro da moldura.
+    let drawWidth = availableWidth;
+    let drawHeight = availableHeight;
+
+    try {
+      const properties = doc.getImageProperties(box.image);
+
+      if (properties.width > 0 && properties.height > 0) {
+        const ratio = properties.width / properties.height;
+        drawHeight = Math.min(availableHeight, availableWidth / ratio);
+        drawWidth = drawHeight * ratio;
+      }
+    } catch {
+      // Sem as dimensões, usa a moldura inteira.
+    }
+
+    try {
+      doc.addImage(
+        box.image,
+        getDataUrlFormat(box.image),
+        x + 5 + inset + (availableWidth - drawWidth) / 2,
+        frameTop + inset + (availableHeight - drawHeight) / 2,
+        drawWidth,
+        drawHeight,
+        undefined,
+        "FAST",
+      );
+    } catch (error) {
+      // Uma imagem corrompida não pode impedir a emissão da ficha inteira.
+      console.warn("[EXIN SST] Imagem não pôde ser embutida no PDF.", error);
+      drawPlaceholder("Imagem indisponível");
+    }
+  } else {
+    drawPlaceholder(box.placeholder ?? "Não capturado");
+  }
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(7);
+  doc.setTextColor(...PDF_COLORS.mutedSoft);
+  doc.text(box.caption ?? "", x + width / 2, y + height - 4.5, {
+    align: "center",
+  });
+};
+
 export const generatePPEDeliveryPdf = async ({
   items,
   employee,
   company,
+  roleName,
 }: GeneratePPEDeliveryPdfParams) => {
   if (items.length === 0) {
     return;
@@ -49,149 +159,149 @@ export const generatePPEDeliveryPdf = async ({
 
   // Assinatura, foto e data são compartilhadas pelo lote (mesma entrega).
   const primaryDelivery = items[0].delivery;
-
-  const { doc, autoTable } = await createPdfDocument();
-
-  doc.setFontSize(18);
-  doc.setTextColor(15, 23, 42);
-  doc.text("Ficha de Entrega de EPI", 105, 20, { align: "center" });
-
-  doc.setFontSize(11);
-  doc.setTextColor(51, 65, 85);
-  doc.text(`Empresa: ${company.name}`, 14, 40);
-  doc.text(`CNPJ: ${company.cnpj}`, 14, 48);
-
-  doc.text(`Colaborador: ${employee.name}`, 14, 60);
-  doc.text(`CPF: ${employee.cpf}`, 14, 68);
-  doc.text(
-    `Data de Admissão: ${new Date(employee.admissionDate).toLocaleDateString("pt-BR")}`,
-    14,
-    76,
+  const protocol = (primaryDelivery.batchId ?? primaryDelivery.id).slice(0, 8);
+  const totalItems = items.reduce(
+    (total, item) => total + item.delivery.quantity,
+    0,
   );
 
-  autoTable(doc, {
-    startY: 90,
-    head: [["EPI", "CA", "Qtd", "Data Entrega", "Motivo"]],
-    body: items.map(({ delivery, ppe }) => [
-      ppe.name,
-      ppe.ca,
-      delivery.quantity.toString(),
-      new Date(delivery.deliveryDate).toLocaleDateString("pt-BR"),
-      formatPPEDeliveryReason(delivery),
-    ]),
-    theme: "grid",
-    headStyles: {
-      fillColor: [37, 99, 235],
-      textColor: 255,
-      fontStyle: "bold",
-    },
-    styles: { fontSize: 10, cellPadding: 5 },
+  const ctx = await createBrandedPdf({
+    title: "Ficha de Entrega de EPI",
+    tag: "Ficha de entrega",
+    footerNote: `Ficha de entrega de EPI · Protocolo ${protocol.toUpperCase()} · ${employee.name}`,
   });
 
-  const finalY =
-    (doc as { lastAutoTable?: { finalY?: number } }).lastAutoTable?.finalY ??
-    120;
-  doc.setFontSize(10);
-  doc.setTextColor(71, 85, 105);
-  const declarationText = buildPPEDeliveryDeclarationText(company.name);
+  let cursorY = drawIntro(ctx, {
+    eyebrow: "Controle de EPI · NR-06",
+    heading: "Ficha de Entrega de Equipamento de Proteção Individual",
+    description:
+      "Registro de entrega assinado digitalmente pelo colaborador, com foto facial de conferência, conforme a NR-06 (Portaria 3.214/78) e as políticas internas de segurança do trabalho.",
+  });
 
-  const splitText = doc.splitTextToSize(declarationText, 180);
-  doc.text(splitText, 14, finalY + 20);
+  cursorY = drawInfoCards(ctx, cursorY, [
+    {
+      title: "Empresa",
+      fields: [
+        { label: "Razão social / Nome", value: company.name },
+        { label: "CNPJ / CPF", value: company.cnpj },
+      ],
+    },
+    {
+      title: "Colaborador",
+      fields: [
+        { label: "Nome", value: employee.name },
+        { label: "CPF", value: employee.cpf },
+        { label: "Cargo", value: roleName ?? "Não informado" },
+        {
+          label: "Admissão",
+          value: formatPdfDate(employee.admissionDate),
+        },
+      ],
+    },
+  ]);
 
-  const pageHeight = doc.internal.pageSize.getHeight();
-  let currentY = finalY + 44;
-  doc.setDrawColor(203, 213, 225);
+  cursorY = drawSectionTitle(
+    ctx,
+    cursorY + 2,
+    "Equipamentos entregues",
+    `${items.length} item(ns) · ${totalItems} unidade(s) · Entrega em ${formatPdfDate(primaryDelivery.deliveryDate)}`,
+  );
 
-  const ensureSpace = (requiredHeight: number) => {
-    if (currentY + requiredHeight <= pageHeight - 18) {
-      return;
-    }
-
-    doc.addPage();
-    currentY = 24;
-  };
-
-  if (primaryDelivery.employeeFacePhoto) {
-    ensureSpace(92);
-    doc.setFontSize(10);
-    doc.setTextColor(15, 23, 42);
-    doc.text("Foto facial do colaborador", 105, currentY, {
-      align: "center",
-    });
-
-    doc.setFillColor(248, 250, 252);
-    doc.rect(62, currentY + 6, 86, 68, "F");
-    doc.addImage(
-      primaryDelivery.employeeFacePhoto,
-      getDataUrlFormat(primaryDelivery.employeeFacePhoto),
-      76,
-      currentY + 10,
-      58,
-      58,
-      undefined,
-      "FAST",
-    );
-
-    if (primaryDelivery.facePhotoCapturedAt) {
-      doc.setFontSize(9);
-      doc.setTextColor(100, 116, 139);
-      doc.text(
-        `Capturada em ${formatPPEDeliverySignedAt(primaryDelivery.facePhotoCapturedAt)}`,
-        105,
-        currentY + 82,
-        { align: "center" },
-      );
-    }
-
-    currentY += 94;
-  }
-
-  if (primaryDelivery.employeeSignature) {
-    ensureSpace(54);
-    const signatureTop = currentY;
-    doc.setFillColor(248, 250, 252);
-    doc.rect(34, signatureTop - 16, 142, 34, "F");
-    doc.addImage(
-      primaryDelivery.employeeSignature,
-      "PNG",
-      40,
-      signatureTop - 12,
-      130,
-      24,
-      undefined,
-      "FAST",
-    );
-    doc.line(40, signatureTop + 18, 170, signatureTop + 18);
-    doc.setTextColor(15, 23, 42);
-    doc.text("Assinatura digital do colaborador", 105, signatureTop + 26, {
-      align: "center",
-    });
-
-    if (primaryDelivery.signedAt) {
-      doc.setFontSize(9);
-      doc.setTextColor(100, 116, 139);
-      doc.text(
-        `Capturada em ${formatPPEDeliverySignedAt(primaryDelivery.signedAt)}`,
-        105,
-        signatureTop + 32,
-        { align: "center" },
-      );
-    }
-  } else {
-    ensureSpace(28);
-    doc.line(40, currentY + 12, 170, currentY + 12);
-    doc.setTextColor(15, 23, 42);
-    doc.text(
-      `Assinatura do Colaborador: ${employee.name}`,
-      105,
-      currentY + 20,
-      {
-        align: "center",
+  ctx.autoTable(
+    ctx.doc,
+    buildTableOptions(ctx, {
+      startY: cursorY + 4,
+      head: [["EPI", "CA", "Qtd", "Data da entrega", "Motivo"]],
+      body: items.map(({ delivery, ppe }) => [
+        ppe.name,
+        ppe.ca,
+        delivery.quantity.toString(),
+        formatPdfDate(delivery.deliveryDate),
+        formatPPEDeliveryReason(delivery),
+      ]),
+      columnStyles: {
+        1: { halign: "center", cellWidth: 22 },
+        2: { halign: "center", cellWidth: 14 },
+        3: { halign: "center", cellWidth: 30 },
       },
-    );
-  }
+    }),
+  );
 
-  doc.save(
+  cursorY = getLastTableBottom(ctx, cursorY) + 8;
+
+  cursorY = ensureSpace(ctx, cursorY, 34);
+  cursorY = drawNoteBox(ctx, cursorY, {
+    title: "Termo de responsabilidade",
+    text: buildPPEDeliveryDeclarationText(company.name),
+  });
+
+  // Comprovações lado a lado (foto facial e assinatura digital).
+  const boxHeight = 58;
+  cursorY = ensureSpace(ctx, cursorY, boxHeight + 6);
+
+  const gap = 5;
+  const boxWidth = (ctx.contentWidth - gap) / 2;
+
+  drawProofBox(
+    ctx,
+    {
+      title: "Foto facial do colaborador",
+      image: primaryDelivery.employeeFacePhoto,
+      caption: primaryDelivery.facePhotoCapturedAt
+        ? `Capturada em ${formatPdfDateTime(primaryDelivery.facePhotoCapturedAt)}`
+        : "Foto não capturada",
+      placeholder: "Sem foto registrada",
+    },
+    ctx.margin,
+    cursorY,
+    boxWidth,
+    boxHeight,
+  );
+
+  drawProofBox(
+    ctx,
+    {
+      title: "Assinatura digital",
+      image: primaryDelivery.employeeSignature,
+      caption: primaryDelivery.signedAt
+        ? `Assinado em ${formatPdfDateTime(primaryDelivery.signedAt)}`
+        : `Assinatura de ${employee.name}`,
+      placeholder: "Assinar no ato da entrega",
+    },
+    ctx.margin + boxWidth + gap,
+    cursorY,
+    boxWidth,
+    boxHeight,
+  );
+
+  cursorY += boxHeight + 8;
+
+  // Linha de conferência do responsável pela entrega.
+  cursorY = ensureSpace(ctx, cursorY, 20);
+  const signatureWidth = 74;
+  const signatureX = ctx.pageWidth - ctx.margin - signatureWidth;
+
+  ctx.doc.setDrawColor(...PDF_COLORS.mutedSoft);
+  ctx.doc.setLineWidth(0.3);
+  ctx.doc.line(ctx.margin, cursorY, ctx.margin + signatureWidth, cursorY);
+  ctx.doc.line(signatureX, cursorY, signatureX + signatureWidth, cursorY);
+
+  ctx.doc.setFont("helvetica", "normal");
+  ctx.doc.setFontSize(7.6);
+  ctx.doc.setTextColor(...PDF_COLORS.muted);
+  ctx.doc.text(
+    "Responsável pela entrega (nome e assinatura)",
+    ctx.margin,
+    cursorY + 4.5,
+  );
+  ctx.doc.text(
+    "Responsável técnico em segurança do trabalho",
+    signatureX,
+    cursorY + 4.5,
+  );
+
+  savePdf(
+    ctx,
     `Ficha_EPI_${employee.name.replace(/\s+/g, "_")}_${primaryDelivery.deliveryDate}.pdf`,
   );
 };

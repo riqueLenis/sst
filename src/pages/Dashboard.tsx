@@ -24,6 +24,7 @@ import {
   YAxis,
 } from "recharts";
 import { useAppContext } from "../store/AppContext";
+import { formatDate } from "../lib/dates";
 
 export default function Dashboard() {
   const [chartsReady, setChartsReady] = React.useState(false);
@@ -408,9 +409,7 @@ export default function Dashboard() {
                     </div>
 
                     <span className="status-pill border border-emerald-100 bg-emerald-50 text-emerald-700">
-                      {new Date(delivery.deliveryDate).toLocaleDateString(
-                        "pt-BR",
-                      )}
+                      {formatDate(delivery.deliveryDate)}
                     </span>
                   </li>
                 );

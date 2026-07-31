@@ -142,6 +142,15 @@ export default function Sectors() {
         columns,
         data,
         "setores_sst_pro",
+        {
+          tag: "Estrutura organizacional",
+          description:
+            "Setores cadastrados e suas atividades, base para o vínculo de cargos e colaboradores.",
+          highlights: [
+            { label: "Setores", value: String(sectors.length) },
+            { label: "Cargos vinculados", value: String(roles.length) },
+          ],
+        },
       );
     } else if (activeTab === "roles") {
       const columns = ["Nome do Cargo", "Setor", "Descrição"];
@@ -149,7 +158,22 @@ export default function Sectors() {
         const sector = sectors.find((s) => s.id === r.sectorId);
         return [r.name, sector?.name || "N/A", r.description];
       });
-      exportTableToPDF("Relatório de Cargos", columns, data, "cargos_sst_pro");
+      exportTableToPDF("Relatório de Cargos", columns, data, "cargos_sst_pro", {
+        tag: "Estrutura organizacional",
+        description:
+          "Cargos cadastrados, setor de origem e responsabilidades registradas.",
+        highlights: [
+          { label: "Cargos", value: String(roles.length) },
+          { label: "Setores", value: String(sectors.length) },
+          {
+            label: "Com EPI obrigatório",
+            value: String(
+              roles.filter((role) => (role.requiredPpeIds ?? []).length > 0)
+                .length,
+            ),
+          },
+        ],
+      });
     } else {
       const columns = ["Cargo", "Setor", "EPIs obrigatórios"];
       const data = roles.map((role) => {
@@ -170,21 +194,37 @@ export default function Sectors() {
         columns,
         data,
         "epis_obrigatorios_por_cargo",
+        {
+          tag: "Matriz de EPIs",
+          description:
+            "Matriz de equipamentos obrigatórios por cargo, usada como referência na entrega de EPIs (NR-06).",
+          highlights: [
+            { label: "Cargos", value: String(roles.length) },
+            {
+              label: "Cargos com EPI",
+              value: String(
+                roles.filter((role) => (role.requiredPpeIds ?? []).length > 0)
+                  .length,
+              ),
+            },
+            { label: "EPIs cadastrados", value: String(ppes.length) },
+          ],
+        },
       );
     }
   };
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="page-header flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-slate-900 flex items-center gap-3">
+          <h1 className="text-3xl font-bold tracking-tight flex items-center gap-3">
             <div className="p-2 bg-blue-100 rounded-xl">
               <Briefcase className="w-6 h-6 text-blue-600" />
             </div>
             Setores e Cargos
           </h1>
-          <p className="text-slate-500 mt-1">
+          <p className="mt-1">
             Estruture a organização da empresa.
           </p>
         </div>

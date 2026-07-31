@@ -196,6 +196,22 @@ export default function Companies() {
       columns,
       data,
       "empresas_sst_pro",
+      {
+        tag: "Cadastro de clientes",
+        description:
+          "Relação das empresas atendidas pela EXIN, com documento, endereço e canal de contato principal.",
+        highlights: [
+          { label: "Empresas listadas", value: String(data.length) },
+          { label: "Base total", value: String(companies.length) },
+          {
+            label: "Com contato",
+            value: String(
+              filteredCompanies.filter((company) => company.contact?.trim())
+                .length,
+            ),
+          },
+        ],
+      },
     );
   };
 

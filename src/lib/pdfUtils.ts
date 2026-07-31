@@ -1,56 +1,88 @@
-const loadPdfTools = async () => {
-  const [{ default: JsPDF }, { default: autoTable }] = await Promise.all([
-    import("jspdf"),
-    import("jspdf-autotable"),
-  ]);
+import {
+  createBrandedPdf,
+  drawHighlights,
+  drawIntro,
+  buildTableOptions,
+  savePdf,
+  type Highlight,
+} from "./pdfTheme";
 
-  return { JsPDF, autoTable };
+export {
+  createBrandedPdf,
+  drawHighlights,
+  drawInfoCards,
+  drawIntro,
+  drawNoteBox,
+  drawSectionTitle,
+  buildTableOptions,
+  ensureSpace,
+  getLastTableBottom,
+  savePdf,
+  formatPdfDate,
+  formatPdfDateTime,
+  PDF_COLORS,
+} from "./pdfTheme";
+
+export type ExportTableOptions = {
+  /** Frase de apoio abaixo do título, explicando o conteúdo do relatório. */
+  description?: string;
+  /** Etiqueta curta no cabeçalho da marca. */
+  tag?: string;
+  /** Indicadores exibidos em cartões antes da tabela. */
+  highlights?: Highlight[];
+  orientation?: "portrait" | "landscape";
 };
 
-export const createPdfDocument = async () => {
-  const { JsPDF, autoTable } = await loadPdfTools();
-
-  return {
-    doc: new JsPDF(),
-    autoTable,
-  };
-};
-
+/**
+ * Relatório tabular padrão do sistema: cabeçalho com a logo da EXIN, bloco de
+ * introdução, indicadores opcionais, tabela estilizada e rodapé numerado.
+ */
 export const exportTableToPDF = (
   title: string,
   columns: string[],
-  data: any[][],
+  data: (string | number)[][],
   filename: string,
+  options: ExportTableOptions = {},
 ) => {
   void (async () => {
-    const { doc, autoTable } = await createPdfDocument();
+    try {
+      // Muitas colunas ficam apertadas em retrato: o relatório vira paisagem.
+      const orientation =
+        options.orientation ?? (columns.length > 6 ? "landscape" : "portrait");
 
-    doc.setFontSize(18);
-    doc.setTextColor(15, 23, 42);
-    doc.text(title, 14, 20);
-    doc.setFontSize(10);
-    doc.setTextColor(100, 116, 139);
-    doc.text(
-      `Relatório gerado em: ${new Date().toLocaleDateString("pt-BR")} às ${new Date().toLocaleTimeString("pt-BR")}`,
-      14,
-      28,
-    );
+      const ctx = await createBrandedPdf({
+        title,
+        tag: options.tag ?? "Relatório",
+        orientation,
+      });
 
-    autoTable(doc, {
-      startY: 35,
-      head: [columns],
-      body: data,
-      theme: "grid",
-      headStyles: {
-        fillColor: [37, 99, 235],
-        textColor: 255,
-        fontStyle: "bold",
-      },
-      styles: { fontSize: 9, cellPadding: 4, textColor: [51, 65, 85] },
-      alternateRowStyles: { fillColor: [248, 250, 252] },
-      margin: { top: 35 },
-    });
+      let cursorY = drawIntro(ctx, {
+        eyebrow: options.tag ?? "Relatório operacional",
+        heading: title,
+        description: options.description,
+      });
 
-    doc.save(`${filename}.pdf`);
+      const highlights: Highlight[] = options.highlights ?? [
+        { label: "Registros", value: String(data.length) },
+      ];
+
+      cursorY = drawHighlights(ctx, cursorY, highlights);
+
+      ctx.autoTable(
+        ctx.doc,
+        buildTableOptions(ctx, {
+          startY: cursorY,
+          head: [columns],
+          body: data.map((row) => row.map((cell) => String(cell ?? "—"))),
+        }),
+      );
+
+      savePdf(ctx, filename);
+    } catch (error) {
+      console.error("[EXIN SST] Falha ao gerar o PDF.", error);
+      window.alert(
+        "Não foi possível gerar o PDF agora. Tente novamente em instantes.",
+      );
+    }
   })();
 };

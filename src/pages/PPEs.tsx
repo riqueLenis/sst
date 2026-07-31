@@ -229,6 +229,37 @@ export default function PPEs() {
       columns,
       data,
       "estoque_epis_sst_pro",
+      {
+        tag: "Estoque e custos",
+        description:
+          "Inventário de equipamentos de proteção individual com CA, níveis de estoque, vida útil e valor imobilizado.",
+        highlights: [
+          { label: "Itens listados", value: String(data.length) },
+          {
+            label: "Unidades em estoque",
+            value: String(
+              filteredPPEs.reduce((total, ppe) => total + ppe.stockQuantity, 0),
+            ),
+          },
+          {
+            label: "Abaixo do mínimo",
+            value: String(
+              filteredPPEs.filter(
+                (ppe) => ppe.stockQuantity < getPpeMinimumStock(ppe),
+              ).length,
+            ),
+          },
+          {
+            label: "Valor em estoque",
+            value: formatCurrency(
+              filteredPPEs.reduce(
+                (total, ppe) => total + ppe.stockQuantity * getPpeUnitCost(ppe),
+                0,
+              ),
+            ),
+          },
+        ],
+      },
     );
   };
 
@@ -600,15 +631,15 @@ export default function PPEs() {
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="page-header flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-slate-900 flex items-center gap-3">
+          <h1 className="text-3xl font-bold tracking-tight flex items-center gap-3">
             <div className="p-2 bg-blue-100 rounded-xl">
               <HardHat className="w-6 h-6 text-blue-600" />
             </div>
             Estoque de EPIs
           </h1>
-          <p className="text-slate-500 mt-1">
+          <p className="mt-1">
             Gerencie o catálogo, o estoque e a disponibilidade dos EPIs.
           </p>
         </div>

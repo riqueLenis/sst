@@ -12,6 +12,7 @@ import {
   User,
 } from "lucide-react";
 import { useAppContext } from "../store/AppContext";
+import { formatDate } from "../lib/dates";
 import {
   formatPPEDeliveryReason,
   formatPPEDeliverySignedAt,
@@ -44,12 +45,13 @@ function getDeliveryStatusClass(status: "delivered" | "returned" | "lost") {
 
 export default function PPEDeliveryDetail() {
   const { id } = useParams<{ id: string }>();
-  const { ppeDeliveries, employees, ppes, companies } = useAppContext();
+  const { ppeDeliveries, employees, ppes, companies, roles } = useAppContext();
 
   const delivery = ppeDeliveries.find((item) => item.id === id);
   const employee = employees.find((item) => item.id === delivery?.employeeId);
   const ppe = ppes.find((item) => item.id === delivery?.ppeId);
   const company = companies.find((item) => item.id === employee?.companyId);
+  const employeeRole = roles.find((item) => item.id === employee?.roleId);
 
   if (!delivery || !employee || !ppe || !company) {
     return (
@@ -104,7 +106,12 @@ export default function PPEDeliveryDetail() {
                   const itemPpe = ppes.find((p) => p.id === item.ppeId);
                   return itemPpe ? [{ delivery: item, ppe: itemPpe }] : [];
                 });
-                void generatePPEDeliveryPdf({ items, employee, company });
+                void generatePPEDeliveryPdf({
+                  items,
+                  employee,
+                  company,
+                  roleName: employeeRole?.name,
+                });
               }}
               className="btn-primary"
             >
@@ -356,7 +363,7 @@ export default function PPEDeliveryDetail() {
               <div className="space-y-2 text-sm text-slate-600">
                 <p>
                   <span className="font-semibold text-slate-800">Entrega:</span>{" "}
-                  {new Date(delivery.deliveryDate).toLocaleDateString("pt-BR")}
+                  {formatDate(delivery.deliveryDate)}
                 </p>
                 <p>
                   <span className="font-semibold text-slate-800">
@@ -371,7 +378,7 @@ export default function PPEDeliveryDetail() {
                     Devolução:
                   </span>{" "}
                   {delivery.returnDate
-                    ? new Date(delivery.returnDate).toLocaleDateString("pt-BR")
+                    ? formatDate(delivery.returnDate)
                     : "Ainda não devolvido"}
                 </p>
               </div>

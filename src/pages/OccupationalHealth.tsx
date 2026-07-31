@@ -17,6 +17,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { exportTableToPDF } from "../lib/pdfUtils";
+import { formatDate } from "../lib/dates";
 import type { ASO, Absence, MedicalReferral } from "../types";
 
 export default function OccupationalHealth() {
@@ -224,13 +225,39 @@ export default function OccupationalHealth() {
       return [
         employee?.name || "N/A",
         a.type.charAt(0).toUpperCase() + a.type.slice(1),
-        new Date(a.date).toLocaleDateString("pt-BR"),
-        new Date(a.validUntil).toLocaleDateString("pt-BR"),
+        formatDate(a.date),
+        formatDate(a.validUntil),
         a.result === "apto" ? "Apto" : "Inapto",
         `${a.doctor} (${a.crm})`,
       ];
     });
-    exportTableToPDF("Relatório de ASOs", columns, data, "asos_sst_pro");
+    exportTableToPDF("Relatório de ASOs", columns, data, "asos_sst_pro", {
+      tag: "Saúde ocupacional",
+      description:
+        "Atestados de Saúde Ocupacional emitidos, com tipo de exame, validade, resultado e médico responsável.",
+      highlights: [
+        { label: "ASOs listados", value: String(data.length) },
+        {
+          label: "Aptos",
+          value: String(
+            filteredASOs.filter((aso) => aso.result === "apto").length,
+          ),
+        },
+        {
+          label: "Inaptos",
+          value: String(
+            filteredASOs.filter((aso) => aso.result === "inapto").length,
+          ),
+        },
+        {
+          label: "Vencidos",
+          value: String(
+            filteredASOs.filter((aso) => new Date(aso.validUntil) < new Date())
+              .length,
+          ),
+        },
+      ],
+    });
   };
 
   // --- Absences Tab ---
@@ -263,8 +290,8 @@ export default function OccupationalHealth() {
         employee?.name || "N/A",
         reasonMap[a.reason],
         a.cid || "-",
-        new Date(a.startDate).toLocaleDateString("pt-BR"),
-        new Date(a.endDate).toLocaleDateString("pt-BR"),
+        formatDate(a.startDate),
+        formatDate(a.endDate),
         a.status === "active" ? "Ativo" : "Finalizado",
       ];
     });
@@ -273,6 +300,28 @@ export default function OccupationalHealth() {
       columns,
       data,
       "afastamentos_sst_pro",
+      {
+        tag: "Saúde ocupacional",
+        description:
+          "Afastamentos registrados por colaborador, com motivo, CID informado e período de ausência.",
+        highlights: [
+          { label: "Afastamentos", value: String(data.length) },
+          {
+            label: "Em andamento",
+            value: String(
+              filteredAbsences.filter((item) => item.status === "active").length,
+            ),
+          },
+          {
+            label: "Acidentes de trabalho",
+            value: String(
+              filteredAbsences.filter(
+                (item) => item.reason === "acidente_trabalho",
+              ).length,
+            ),
+          },
+        ],
+      },
     );
   };
 
@@ -300,7 +349,7 @@ export default function OccupationalHealth() {
     const data = filteredReferrals.map((r) => {
       const employee = employees.find((e) => e.id === r.employeeId);
       return [
-        new Date(r.date).toLocaleDateString("pt-BR"),
+        formatDate(r.date),
         employee?.name || "N/A",
         r.specialty,
         r.reason,
@@ -312,6 +361,28 @@ export default function OccupationalHealth() {
       columns,
       data,
       "encaminhamentos_sst_pro",
+      {
+        tag: "Saúde ocupacional",
+        description:
+          "Encaminhamentos médicos solicitados, com especialidade, motivo e situação do atendimento.",
+        highlights: [
+          { label: "Encaminhamentos", value: String(data.length) },
+          {
+            label: "Pendentes",
+            value: String(
+              filteredReferrals.filter((item) => item.status === "pending")
+                .length,
+            ),
+          },
+          {
+            label: "Concluídos",
+            value: String(
+              filteredReferrals.filter((item) => item.status === "completed")
+                .length,
+            ),
+          },
+        ],
+      },
     );
   };
 
@@ -328,15 +399,15 @@ export default function OccupationalHealth() {
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="page-header flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-slate-900 flex items-center gap-3">
+          <h1 className="text-3xl font-bold tracking-tight flex items-center gap-3">
             <div className="p-2 bg-rose-100 rounded-xl">
               <Stethoscope className="w-6 h-6 text-rose-600" />
             </div>
             Saúde Ocupacional
           </h1>
-          <p className="text-slate-500 mt-1">
+          <p className="mt-1">
             Gestão de ASOs, afastamentos e encaminhamentos médicos.
           </p>
         </div>
@@ -490,13 +561,13 @@ export default function OccupationalHealth() {
                         <td className="px-6 py-4 capitalize">{a.type}</td>
                         <td className="px-6 py-4">
                           <p className="text-slate-900">
-                            {new Date(a.date).toLocaleDateString("pt-BR")}
+                            {formatDate(a.date)}
                           </p>
                           <p
                             className={`text-xs mt-0.5 ${isExpired ? "text-red-600 font-semibold" : "text-slate-500"}`}
                           >
                             Vence:{" "}
-                            {new Date(a.validUntil).toLocaleDateString("pt-BR")}
+                            {formatDate(a.validUntil)}
                           </p>
                         </td>
                         <td className="px-6 py-4">
@@ -616,11 +687,11 @@ export default function OccupationalHealth() {
                         </td>
                         <td className="px-6 py-4">
                           <p className="text-slate-900">
-                            {new Date(a.startDate).toLocaleDateString("pt-BR")}{" "}
+                            {formatDate(a.startDate)}{" "}
                             até
                           </p>
                           <p className="text-slate-900">
-                            {new Date(a.endDate).toLocaleDateString("pt-BR")}
+                            {formatDate(a.endDate)}
                           </p>
                         </td>
                         <td className="px-6 py-4">
@@ -742,7 +813,7 @@ export default function OccupationalHealth() {
                         className="bg-white hover:bg-slate-50/80 transition-colors"
                       >
                         <td className="px-6 py-4 font-medium text-slate-900">
-                          {new Date(r.date).toLocaleDateString("pt-BR")}
+                          {formatDate(r.date)}
                         </td>
                         <td className="px-6 py-4 font-semibold text-slate-900">
                           {employee?.name || "N/A"}

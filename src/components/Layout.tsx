@@ -20,6 +20,7 @@ import {
   Users,
 } from "lucide-react";
 import { apiClient } from "../lib/apiClient";
+import ErrorBoundary from "./ErrorBoundary";
 import { brand } from "../lib/brand";
 import { cn } from "../lib/utils";
 import { useAppContext } from "../store/AppContext";
@@ -308,7 +309,7 @@ export default function Layout() {
       <div className="app-main">
         <div className="app-main-inner">
           <header className="app-header">
-            <div className="flex min-w-0 flex-1 items-start gap-3">
+            <div className="flex min-w-0 flex-1 items-center gap-3 lg:items-start">
               <button
                 onClick={() => setSidebarOpen(true)}
                 className="app-menu-button lg:hidden"
@@ -332,7 +333,7 @@ export default function Layout() {
             </div>
 
             <div className="app-header-actions">
-              <div className="app-date-chip hidden md:inline-flex">
+              <div className="app-date-chip hidden lg:inline-flex">
                 <Command className="h-4 w-4" />
                 {formattedDate}
               </div>
@@ -349,7 +350,7 @@ export default function Layout() {
                 <div className="header-user-avatar bg-linear-to-br from-teal-600 to-sky-600">
                   {userInitials}
                 </div>
-                <div className="hidden sm:block">
+                <div className="hidden lg:block">
                   <p className="header-user-name">{user?.name ?? "Operador"}</p>
                   <p className="header-user-role">{userRoleLabel}</p>
                 </div>
@@ -415,7 +416,16 @@ export default function Layout() {
                   </div>
                 </div>
               ) : (
-                <Outlet />
+                // A key por rota faz o limite de erro se recuperar sozinho ao
+                // navegar para outra tela.
+                <ErrorBoundary
+                  key={location.pathname}
+                  onReset={() => {
+                    void refreshData();
+                  }}
+                >
+                  <Outlet />
+                </ErrorBoundary>
               )}
             </div>
           </main>

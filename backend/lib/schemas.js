@@ -19,6 +19,42 @@ const optionalDateString = (label) =>
     .optional()
     .transform((value) => (value ? value : undefined));
 
+// Idade mínima para cadastro de colaborador (menor aprendiz a partir de 16 anos).
+export const MIN_EMPLOYEE_AGE_YEARS = 16;
+const MAX_EMPLOYEE_AGE_YEARS = 100;
+
+const calculateAgeInYears = (value) => {
+  const birth = new Date(value);
+
+  if (Number.isNaN(birth.getTime())) {
+    return null;
+  }
+
+  const now = new Date();
+  let age = now.getUTCFullYear() - birth.getUTCFullYear();
+  const hasHadBirthdayThisYear =
+    now.getUTCMonth() > birth.getUTCMonth() ||
+    (now.getUTCMonth() === birth.getUTCMonth() &&
+      now.getUTCDate() >= birth.getUTCDate());
+
+  if (!hasHadBirthdayThisYear) {
+    age -= 1;
+  }
+
+  return age;
+};
+
+const birthDateString = (label) =>
+  dateString(label)
+    .refine(
+      (value) => (calculateAgeInYears(value) ?? -1) >= MIN_EMPLOYEE_AGE_YEARS,
+      `O colaborador precisa ter no mínimo ${MIN_EMPLOYEE_AGE_YEARS} anos.`,
+    )
+    .refine(
+      (value) => (calculateAgeInYears(value) ?? 0) <= MAX_EMPLOYEE_AGE_YEARS,
+      `${label} inválida: idade acima de ${MAX_EMPLOYEE_AGE_YEARS} anos.`,
+    );
+
 const optionalTrimmedString = (label, max = 255) =>
   z
     .union([trimmedString(label, max), z.literal("")])
@@ -192,7 +228,7 @@ const employeeSchema = z
     name: trimmedString("Nome do colaborador", 180),
     cpf: trimmedString("CPF", 20),
     rg: optionalTextField("RG", 30),
-    birthDate: dateString("Data de nascimento"),
+    birthDate: birthDateString("Data de nascimento"),
     admissionDate: dateString("Data de admissão"),
     companyId: trimmedString("Empresa", 80),
     roleId: trimmedString("Cargo", 80),

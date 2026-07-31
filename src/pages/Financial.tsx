@@ -17,6 +17,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { exportTableToPDF } from "../lib/pdfUtils";
+import { formatDate } from "../lib/dates";
 import type { Transaction } from "../types";
 
 type TransactionFormState = Omit<Transaction, "id">;
@@ -160,8 +161,8 @@ export default function Financial() {
     const data = filteredTransactions.map((t) => {
       const company = companies.find((c) => c.id === t.companyId);
       return [
-        new Date(t.date).toLocaleDateString("pt-BR"),
-        new Date(t.dueDate).toLocaleDateString("pt-BR"),
+        formatDate(t.date),
+        formatDate(t.dueDate),
         company?.name || "N/A",
         t.description,
         t.category,
@@ -170,11 +171,29 @@ export default function Financial() {
         t.status === "paid" ? "Pago" : "Pendente",
       ];
     });
+    const totalIncome = filteredTransactions
+      .filter((t) => t.type === "income")
+      .reduce((total, t) => total + t.amount, 0);
+    const totalExpense = filteredTransactions
+      .filter((t) => t.type === "expense")
+      .reduce((total, t) => total + t.amount, 0);
+
     exportTableToPDF(
       "Relatório de Transações",
       columns,
       data,
       "transacoes_sst_pro",
+      {
+        tag: "Financeiro",
+        description:
+          "Movimentações financeiras registradas, com emissão, vencimento, categoria e situação de pagamento.",
+        highlights: [
+          { label: "Lançamentos", value: String(data.length) },
+          { label: "Receitas", value: formatCurrency(totalIncome) },
+          { label: "Despesas", value: formatCurrency(totalExpense) },
+          { label: "Saldo", value: formatCurrency(totalIncome - totalExpense) },
+        ],
+      },
     );
   };
 
@@ -233,6 +252,32 @@ export default function Financial() {
       columns,
       data,
       "faturamento_sst_pro",
+      {
+        tag: "Financeiro",
+        description:
+          "Faturamento consolidado por cliente, separando o que já foi recebido do que segue pendente.",
+        highlights: [
+          { label: "Empresas", value: String(billingByCompany.length) },
+          {
+            label: "Faturado",
+            value: formatCurrency(
+              billingByCompany.reduce((total, b) => total + b.totalBilled, 0),
+            ),
+          },
+          {
+            label: "Recebido",
+            value: formatCurrency(
+              billingByCompany.reduce((total, b) => total + b.totalPaid, 0),
+            ),
+          },
+          {
+            label: "Pendente",
+            value: formatCurrency(
+              billingByCompany.reduce((total, b) => total + b.totalPending, 0),
+            ),
+          },
+        ],
+      },
     );
   };
 
@@ -281,25 +326,42 @@ export default function Financial() {
       formatCurrency(c.expense),
       formatCurrency(c.balance),
     ]);
+    const totalIncome = cashFlowByMonth.reduce((sum, c) => sum + c.income, 0);
+    const totalExpense = cashFlowByMonth.reduce((sum, c) => sum + c.expense, 0);
+
     exportTableToPDF(
       "Relatório de Fluxo de Caixa",
       columns,
       data,
       "fluxo_caixa_sst_pro",
+      {
+        tag: "Financeiro",
+        description:
+          "Entradas e saídas efetivamente liquidadas, agrupadas por mês de competência.",
+        highlights: [
+          { label: "Meses", value: String(cashFlowByMonth.length) },
+          { label: "Receitas pagas", value: formatCurrency(totalIncome) },
+          { label: "Despesas pagas", value: formatCurrency(totalExpense) },
+          {
+            label: "Saldo acumulado",
+            value: formatCurrency(totalIncome - totalExpense),
+          },
+        ],
+      },
     );
   };
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="page-header flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-slate-900 flex items-center gap-3">
+          <h1 className="text-3xl font-bold tracking-tight flex items-center gap-3">
             <div className="p-2 bg-emerald-100 rounded-xl">
               <DollarSign className="w-6 h-6 text-emerald-600" />
             </div>
             Financeiro
           </h1>
-          <p className="text-slate-500 mt-1">
+          <p className="mt-1">
             Gestão de contas a pagar, receber e faturamento.
           </p>
         </div>
@@ -463,7 +525,7 @@ export default function Financial() {
                               isOverdue ? "text-red-600 font-semibold" : ""
                             }
                           >
-                            {new Date(t.dueDate).toLocaleDateString("pt-BR")}
+                            {formatDate(t.dueDate)}
                           </span>
                         </td>
                         <td className="px-6 py-4">

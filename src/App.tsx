@@ -1,5 +1,6 @@
 import React, { Suspense, lazy } from "react";
 import { BrowserRouter as Router, Navigate, Route, Routes } from "react-router-dom";
+import ErrorBoundary from "./components/ErrorBoundary";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { brand } from "./lib/brand";
 import { AuthProvider } from "./store/AuthContext";
@@ -89,48 +90,50 @@ export default function App() {
   );
 
   return (
-    <AuthProvider>
-      <Router>
-        <Suspense fallback={<AppFallback />}>
-          <Routes>
-            <Route path="/login" element={<Login />} />
-            <Route element={<ProtectedRoute />}>
-              <Route path="/" element={<ProtectedApp />}>
-                <Route index element={<AppHome />} />
-                <Route path="epis" element={<PPEs />} />
-                <Route path="entregas" element={<PPEDeliveries />} />
-                <Route path="entregas/:id" element={<PPEDeliveryDetail />} />
-                <Route
-                  element={
-                    <ProtectedRoute allowedRoles={["admin"]} redirectTo="/" />
-                  }
-                >
-                  <Route path="acessos" element={<AccessManagement />} />
-                </Route>
-                <Route
-                  element={
-                    <ProtectedRoute
-                      allowedRoles={["admin", "manager"]}
-                      redirectTo="/epis"
-                    />
-                  }
-                >
-                  <Route path="empresas" element={<Companies />} />
-                  <Route path="setores" element={<Sectors />} />
-                  <Route path="colaboradores" element={<Employees />} />
+    <ErrorBoundary fullPage title="Não foi possível carregar o sistema">
+      <AuthProvider>
+        <Router>
+          <Suspense fallback={<AppFallback />}>
+            <Routes>
+              <Route path="/login" element={<Login />} />
+              <Route element={<ProtectedRoute />}>
+                <Route path="/" element={<ProtectedApp />}>
+                  <Route index element={<AppHome />} />
+                  <Route path="epis" element={<PPEs />} />
+                  <Route path="entregas" element={<PPEDeliveries />} />
+                  <Route path="entregas/:id" element={<PPEDeliveryDetail />} />
                   <Route
-                    path="colaboradores/:id"
-                    element={<EmployeeProfile />}
-                  />
-                  <Route path="saude" element={<OccupationalHealth />} />
-                  <Route path="programas" element={<Programs />} />
-                  <Route path="financeiro" element={<Financial />} />
+                    element={
+                      <ProtectedRoute allowedRoles={["admin"]} redirectTo="/" />
+                    }
+                  >
+                    <Route path="acessos" element={<AccessManagement />} />
+                  </Route>
+                  <Route
+                    element={
+                      <ProtectedRoute
+                        allowedRoles={["admin", "manager"]}
+                        redirectTo="/epis"
+                      />
+                    }
+                  >
+                    <Route path="empresas" element={<Companies />} />
+                    <Route path="setores" element={<Sectors />} />
+                    <Route path="colaboradores" element={<Employees />} />
+                    <Route
+                      path="colaboradores/:id"
+                      element={<EmployeeProfile />}
+                    />
+                    <Route path="saude" element={<OccupationalHealth />} />
+                    <Route path="programas" element={<Programs />} />
+                    <Route path="financeiro" element={<Financial />} />
+                  </Route>
                 </Route>
               </Route>
-            </Route>
-          </Routes>
-        </Suspense>
-      </Router>
-    </AuthProvider>
+            </Routes>
+          </Suspense>
+        </Router>
+      </AuthProvider>
+    </ErrorBoundary>
   );
 }

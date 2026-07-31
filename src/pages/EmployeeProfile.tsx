@@ -11,7 +11,21 @@ import {
   Download,
   ShieldCheck,
 } from "lucide-react";
-import { createPdfDocument } from "../lib/pdfUtils";
+import {
+  buildTableOptions,
+  createBrandedPdf,
+  drawHighlights,
+  drawInfoCards,
+  drawIntro,
+  drawNoteBox,
+  drawSectionTitle,
+  ensureSpace,
+  formatPdfDate,
+  getLastTableBottom,
+  savePdf,
+  PDF_COLORS,
+} from "../lib/pdfUtils";
+import { formatDate } from "../lib/dates";
 
 export default function EmployeeProfile() {
   const { id } = useParams<{ id: string }>();
@@ -58,100 +72,160 @@ export default function EmployeeProfile() {
     void (async () => {
       if (!company) return;
 
-      const { doc, autoTable } = await createPdfDocument();
+      try {
+        const totalUnits = employeeDeliveries.reduce(
+          (total, delivery) => total + delivery.quantity,
+          0,
+        );
+        const activeItems = employeeDeliveries.filter(
+          (delivery) => delivery.status === "delivered",
+        ).length;
+        const lastDelivery = employeeDeliveries[0];
 
-      doc.setFontSize(18);
-      doc.setTextColor(15, 23, 42);
-      doc.text("Ficha Completa de Entrega de EPI", 105, 20, {
-        align: "center",
-      });
+        const ctx = await createBrandedPdf({
+          title: "Ficha completa de EPIs",
+          tag: "Histórico do colaborador",
+          footerNote: `Histórico de EPIs · ${employee.name} · CPF ${employee.cpf}`,
+        });
 
-      doc.setFontSize(11);
-      doc.setTextColor(51, 65, 85);
-      doc.text(`Empresa: ${company.name}`, 14, 40);
-      doc.text(`CNPJ: ${company.cnpj}`, 14, 48);
+        let cursorY = drawIntro(ctx, {
+          eyebrow: "Saúde e segurança do trabalho",
+          heading: "Ficha completa de entrega de EPIs",
+          description:
+            "Consolidado de todos os equipamentos de proteção individual entregues ao colaborador, com quantidades, motivos e situação atual de cada item.",
+        });
 
-      doc.text(`Colaborador: ${employee.name}`, 14, 60);
-      doc.text(`CPF: ${employee.cpf}`, 14, 68);
-      doc.text(
-        `Cargo: ${role?.name || "N/A"} - Setor: ${sector?.name || "N/A"}`,
-        14,
-        76,
-      );
-      doc.text(
-        `Data de Admissão: ${new Date(employee.admissionDate).toLocaleDateString("pt-BR")}`,
-        14,
-        84,
-      );
+        cursorY = drawInfoCards(ctx, cursorY, [
+          {
+            title: "Empresa",
+            fields: [
+              { label: "Razão social / Nome", value: company.name },
+              { label: "CNPJ / CPF", value: company.cnpj },
+            ],
+          },
+          {
+            title: "Colaborador",
+            fields: [
+              { label: "Nome", value: employee.name },
+              { label: "CPF", value: employee.cpf },
+              {
+                label: "Cargo / Setor",
+                value: `${role?.name ?? "Não definido"} · ${sector?.name ?? "Setor não definido"}`,
+              },
+              {
+                label: "Admissão",
+                value: formatPdfDate(employee.admissionDate),
+              },
+            ],
+          },
+        ]);
 
-      const tableData = employeeDeliveries.map((delivery) => {
-        const ppe = ppes.find((p) => p.id === delivery.ppeId);
-        return [
-          ppe?.name || "Desconhecido",
-          ppe?.ca || "-",
-          delivery.quantity.toString(),
-          new Date(delivery.deliveryDate).toLocaleDateString("pt-BR"),
-          delivery.reason,
-          delivery.status === "delivered"
-            ? "Entregue"
-            : delivery.status === "returned"
-              ? "Devolvido"
-              : "Extraviado",
-        ];
-      });
+        cursorY = drawHighlights(ctx, cursorY, [
+          { label: "Entregas", value: String(employeeDeliveries.length) },
+          { label: "Unidades", value: String(totalUnits) },
+          { label: "Em uso", value: String(activeItems) },
+          {
+            label: "Última entrega",
+            value: lastDelivery
+              ? formatPdfDate(lastDelivery.deliveryDate)
+              : "—",
+          },
+        ]);
 
-      autoTable(doc, {
-        startY: 95,
-        head: [["EPI", "CA", "Qtd", "Data", "Motivo", "Status"]],
-        body: tableData,
-        theme: "grid",
-        headStyles: {
-          fillColor: [37, 99, 235],
-          textColor: 255,
-          fontStyle: "bold",
-        },
-        styles: { fontSize: 10, cellPadding: 5 },
-      });
+        cursorY = drawSectionTitle(
+          ctx,
+          cursorY + 2,
+          "Histórico de entregas",
+          "Registros ordenados da entrega mais recente para a mais antiga.",
+        );
 
-      const finalY = (doc as any).lastAutoTable.finalY || 120;
-      doc.setFontSize(10);
-      doc.setTextColor(71, 85, 105);
-      const declarationText = `Declaro ter recebido da empresa ${company.name} os Equipamentos de Proteção Individual (EPI) constantes nesta ficha, comprometendo-me a usá-los apenas para a finalidade a que se destinam, responsabilizando-me por sua guarda e conservação, e a comunicar qualquer alteração que os torne impróprios para uso.`;
+        ctx.autoTable(
+          ctx.doc,
+          buildTableOptions(ctx, {
+            startY: cursorY + 4,
+            head: [["Data", "EPI", "CA", "Qtd", "Motivo", "Situação"]],
+            body: employeeDeliveries.map((delivery) => {
+              const ppe = ppes.find((p) => p.id === delivery.ppeId);
 
-      const splitText = doc.splitTextToSize(declarationText, 180);
-      doc.text(splitText, 14, finalY + 20);
+              return [
+                formatPdfDate(delivery.deliveryDate),
+                ppe?.name || "Não encontrado",
+                ppe?.ca || "—",
+                delivery.quantity.toString(),
+                delivery.reason,
+                delivery.status === "delivered"
+                  ? "Entregue"
+                  : delivery.status === "returned"
+                    ? "Devolvido"
+                    : "Extraviado",
+              ];
+            }),
+            columnStyles: {
+              0: { cellWidth: 24 },
+              2: { halign: "center", cellWidth: 20 },
+              3: { halign: "center", cellWidth: 14 },
+            },
+          }),
+        );
 
-      doc.setDrawColor(203, 213, 225);
-      doc.line(40, finalY + 70, 170, finalY + 70);
-      doc.setTextColor(15, 23, 42);
-      doc.text(
-        `Assinatura do Colaborador: ${employee.name}`,
-        105,
-        finalY + 78,
-        {
+        cursorY = getLastTableBottom(ctx, cursorY) + 8;
+        cursorY = ensureSpace(ctx, cursorY, 40);
+        cursorY = drawNoteBox(ctx, cursorY, {
+          title: "Termo de responsabilidade",
+          text: `Declaro ter recebido da empresa ${company.name} os Equipamentos de Proteção Individual (EPI) constantes nesta ficha, comprometendo-me a usá-los apenas para a finalidade a que se destinam, responsabilizando-me por sua guarda e conservação, e a comunicar qualquer alteração que os tornem impróprios para uso.`,
+        });
+
+        cursorY = ensureSpace(ctx, cursorY + 12, 22);
+
+        const lineWidth = 90;
+        const lineX = (ctx.pageWidth - lineWidth) / 2;
+
+        ctx.doc.setDrawColor(...PDF_COLORS.mutedSoft);
+        ctx.doc.setLineWidth(0.3);
+        ctx.doc.line(lineX, cursorY, lineX + lineWidth, cursorY);
+
+        ctx.doc.setFont("helvetica", "bold");
+        ctx.doc.setFontSize(8.6);
+        ctx.doc.setTextColor(...PDF_COLORS.text);
+        ctx.doc.text(employee.name, ctx.pageWidth / 2, cursorY + 5, {
           align: "center",
-        },
-      );
+        });
 
-      doc.save(`Historico_EPI_${employee.name.replace(/\s+/g, "_")}.pdf`);
+        ctx.doc.setFont("helvetica", "normal");
+        ctx.doc.setFontSize(7.4);
+        ctx.doc.setTextColor(...PDF_COLORS.mutedSoft);
+        ctx.doc.text(
+          "Assinatura do colaborador",
+          ctx.pageWidth / 2,
+          cursorY + 9.5,
+          { align: "center" },
+        );
+
+        savePdf(ctx, `Historico_EPI_${employee.name.replace(/\s+/g, "_")}.pdf`);
+      } catch (error) {
+        console.error("[EXIN SST] Falha ao gerar a ficha completa.", error);
+        window.alert(
+          "Não foi possível gerar a ficha completa agora. Tente novamente em instantes.",
+        );
+      }
     })();
   };
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="page-header flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-4">
           <Link
             to="/colaboradores"
-            className="p-2 text-slate-400 hover:text-slate-700 hover:bg-white border border-transparent hover:border-slate-200 shadow-sm rounded-xl transition-all"
+            className="p-2 text-white/75 hover:text-white hover:bg-white/15 border border-transparent hover:border-white/25 rounded-xl transition-all"
           >
             <ArrowLeft className="w-5 h-5" />
           </Link>
           <div>
-            <h1 className="text-3xl font-bold tracking-tight text-slate-900">
+            <h1 className="text-3xl font-bold tracking-tight">
               Perfil do Colaborador
             </h1>
-            <p className="text-slate-500 mt-1">
+            <p className="mt-1">
               Detalhes e histórico completo.
             </p>
           </div>
@@ -193,7 +267,7 @@ export default function EmployeeProfile() {
                 <p className="font-semibold text-red-800">
                   Colaborador demitido
                   {employee.dismissalDate
-                    ? ` em ${new Date(employee.dismissalDate).toLocaleDateString("pt-BR")}`
+                    ? ` em ${formatDate(employee.dismissalDate)}`
                     : ""}
                 </p>
                 {employee.dismissalNotes && (
@@ -259,14 +333,10 @@ export default function EmployeeProfile() {
                     Datas
                   </p>
                   <p className="text-sm font-medium text-slate-900 mt-0.5">
-                    Nasc:{" "}
-                    {new Date(employee.birthDate).toLocaleDateString("pt-BR")}
+                    Nasc: {formatDate(employee.birthDate)}
                   </p>
                   <p className="text-sm text-slate-500">
-                    Adm:{" "}
-                    {new Date(employee.admissionDate).toLocaleDateString(
-                      "pt-BR",
-                    )}
+                    Adm: {formatDate(employee.admissionDate)}
                   </p>
                 </div>
               </div>
@@ -302,9 +372,7 @@ export default function EmployeeProfile() {
                       className="bg-white hover:bg-slate-50/80 transition-colors"
                     >
                       <td className="px-6 py-4 font-medium text-slate-900 whitespace-nowrap">
-                        {new Date(delivery.deliveryDate).toLocaleDateString(
-                          "pt-BR",
-                        )}
+                        {formatDate(delivery.deliveryDate)}
                       </td>
                       <td className="px-6 py-4 font-semibold text-slate-900">
                         {ppe?.name || "Não encontrado"}

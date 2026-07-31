@@ -13,6 +13,7 @@ import {
   Search,
 } from "lucide-react";
 import { exportTableToPDF } from "../lib/pdfUtils";
+import { formatDate } from "../lib/dates";
 import FacePhotoCapture from "../components/FacePhotoCapture";
 import SignaturePad from "../components/SignaturePad";
 import type { PPEDelivery } from "../types";
@@ -439,6 +440,7 @@ export default function PPEDeliveries() {
   const generatePDF = (delivery: PPEDelivery) => {
     const employee = employees.find((e) => e.id === delivery.employeeId);
     const company = companies.find((c) => c.id === employee?.companyId);
+    const employeeRole = roles.find((role) => role.id === employee?.roleId);
 
     if (!employee || !company) {
       return;
@@ -458,7 +460,12 @@ export default function PPEDeliveries() {
       return;
     }
 
-    void generatePPEDeliveryPdf({ items, employee, company });
+    void generatePPEDeliveryPdf({
+      items,
+      employee,
+      company,
+      roleName: employeeRole?.name,
+    });
   };
 
   const handleExportListPDF = () => {
@@ -476,7 +483,7 @@ export default function PPEDeliveries() {
       const employee = employees.find((e) => e.id === d.employeeId);
       const ppe = ppes.find((p) => p.id === d.ppeId);
       return [
-        new Date(d.deliveryDate).toLocaleDateString("pt-BR"),
+        formatDate(d.deliveryDate),
         employee?.name || "N/A",
         ppe?.name || "N/A",
         d.quantity.toString(),
@@ -495,6 +502,38 @@ export default function PPEDeliveries() {
       columns,
       data,
       "entregas_epis_sst_pro",
+      {
+        tag: "Controle de EPI · NR-06",
+        description:
+          "Entregas registradas com colaborador, equipamento, motivo e comprovações (assinatura digital e foto facial).",
+        highlights: [
+          { label: "Entregas", value: String(data.length) },
+          {
+            label: "Unidades",
+            value: String(
+              filteredDeliveries.reduce(
+                (total, delivery) => total + delivery.quantity,
+                0,
+              ),
+            ),
+          },
+          {
+            label: "Assinadas",
+            value: String(
+              filteredDeliveries.filter((delivery) => delivery.employeeSignature)
+                .length,
+            ),
+          },
+          {
+            label: "Devolvidas",
+            value: String(
+              filteredDeliveries.filter(
+                (delivery) => delivery.status === "returned",
+              ).length,
+            ),
+          },
+        ],
+      },
     );
   };
 
@@ -537,15 +576,15 @@ export default function PPEDeliveries() {
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="page-header flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-slate-900 flex items-center gap-3">
+          <h1 className="text-3xl font-bold tracking-tight flex items-center gap-3">
             <div className="p-2 bg-blue-100 rounded-xl">
               <ShieldCheck className="w-6 h-6 text-blue-600" />
             </div>
             Entregas de EPI
           </h1>
-          <p className="text-slate-500 mt-1">
+          <p className="mt-1">
             Registre e acompanhe as entregas de equipamentos.
           </p>
         </div>
@@ -605,7 +644,7 @@ export default function PPEDeliveries() {
                       {employee?.name || "Não encontrado"}
                     </p>
                     <p className="mobile-record-copy">
-                      {new Date(delivery.deliveryDate).toLocaleDateString("pt-BR")} • {ppe?.name || "Não encontrado"}
+                      {formatDate(delivery.deliveryDate)} • {ppe?.name || "Não encontrado"}
                     </p>
                   </div>
 
@@ -710,9 +749,7 @@ export default function PPEDeliveries() {
                     className="bg-white hover:bg-slate-50/80 transition-colors"
                   >
                     <td className="px-6 py-4 font-medium text-slate-900">
-                      {new Date(delivery.deliveryDate).toLocaleDateString(
-                        "pt-BR",
-                      )}
+                      {formatDate(delivery.deliveryDate)}
                     </td>
                     <td className="px-6 py-4 font-semibold text-slate-900">
                       {employee?.name || "Não encontrado"}

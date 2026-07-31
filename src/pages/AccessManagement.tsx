@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { apiClient, getApiErrorMessage } from "../lib/apiClient";
 import { useAuth } from "../store/AuthContext";
+import { formatDate } from "../lib/dates";
 import type { ManagedUser, UserRole } from "../types";
 
 type UserFormState = {
@@ -477,7 +478,7 @@ export default function AccessManagement() {
                         <p className="mobile-record-label">Criado em</p>
                         <p className="mobile-record-value">
                           {user.createdAt
-                            ? new Date(user.createdAt).toLocaleDateString("pt-BR")
+                            ? formatDate(user.createdAt)
                             : "Sem registro"}
                         </p>
                       </div>
@@ -539,7 +540,7 @@ export default function AccessManagement() {
                         </td>
                         <td className="px-4 py-4">
                           {user.createdAt
-                            ? new Date(user.createdAt).toLocaleDateString("pt-BR")
+                            ? formatDate(user.createdAt)
                             : "Sem registro"}
                         </td>
                         <td className="px-4 py-4">

@@ -14,6 +14,7 @@ import {
   ShieldAlert,
 } from "lucide-react";
 import { exportTableToPDF } from "../lib/pdfUtils";
+import { formatDate } from "../lib/dates";
 import type { SSTDocument } from "../types";
 
 export default function Programs() {
@@ -134,8 +135,8 @@ export default function Programs() {
         d.title,
         d.type,
         company?.name || "N/A",
-        new Date(d.issueDate).toLocaleDateString("pt-BR"),
-        new Date(d.validUntil).toLocaleDateString("pt-BR"),
+        formatDate(d.issueDate),
+        formatDate(d.validUntil),
         adicionais.length > 0 ? adicionais.join(", ") : "Nenhum",
         d.status === "active" && !isExpired
           ? "Ativo"
@@ -149,6 +150,17 @@ export default function Programs() {
       columns,
       data,
       "programas_laudos_sst_pro",
+      {
+        tag: "Documentos SST",
+        description:
+          "PGR, LTCAT e demais laudos com vigência, adicionais aplicáveis e situação atual de cada documento.",
+        highlights: [
+          { label: "Documentos", value: String(data.length) },
+          { label: "Vigentes", value: String(activeDocs) },
+          { label: "Vencidos", value: String(expiredDocs) },
+          { label: "Com adicionais", value: String(docsWithAditionals) },
+        ],
+      },
     );
   };
 
@@ -165,15 +177,15 @@ export default function Programs() {
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="page-header flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-slate-900 flex items-center gap-3">
+          <h1 className="text-3xl font-bold tracking-tight flex items-center gap-3">
             <div className="p-2 bg-indigo-100 rounded-xl">
               <FileSignature className="w-6 h-6 text-indigo-600" />
             </div>
             Programas e Laudos
           </h1>
-          <p className="text-slate-500 mt-1">
+          <p className="mt-1">
             Gestão de PGR, LTCAT e controle de adicionais.
           </p>
         </div>
@@ -301,13 +313,13 @@ export default function Programs() {
                     </td>
                     <td className="px-6 py-4">
                       <p className="text-slate-900">
-                        {new Date(doc.issueDate).toLocaleDateString("pt-BR")}
+                        {formatDate(doc.issueDate)}
                       </p>
                       <p
                         className={`text-xs mt-0.5 ${isExpired ? "text-red-600 font-semibold" : "text-slate-500"}`}
                       >
                         Vence:{" "}
-                        {new Date(doc.validUntil).toLocaleDateString("pt-BR")}
+                        {formatDate(doc.validUntil)}
                       </p>
                     </td>
                     <td className="px-6 py-4">

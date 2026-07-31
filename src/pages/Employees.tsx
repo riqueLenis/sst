@@ -13,6 +13,14 @@ import { useAppContext } from "../store/AppContext";
 import { exportTableToPDF } from "../lib/pdfUtils";
 import { Button } from "../components/Button";
 import { formatCPF } from "../lib/masks";
+import {
+  MIN_EMPLOYEE_AGE_YEARS,
+  calculateAge,
+  formatDate,
+  getMaxBirthDateInput,
+  getMinBirthDateInput,
+  validateBirthDate,
+} from "../lib/dates";
 import type { Employee } from "../types";
 
 type EmployeeFormState = Omit<Employee, "id">;
@@ -48,6 +56,11 @@ export default function Employees() {
 
   const [formData, setFormData] = useState<EmployeeFormState>(initialFormState);
   const [isSaving, setIsSaving] = useState(false);
+  const [birthDateError, setBirthDateError] = useState<string | null>(null);
+  // Limites do input de data: bloqueiam a seleção de menores de 16 anos.
+  const maxBirthDate = getMaxBirthDateInput();
+  const minBirthDate = getMinBirthDateInput();
+  const currentAge = calculateAge(formData.birthDate);
 
   const searchDigits = searchTerm.replace(/\D/g, "");
   const filteredEmployees = employees.filter((employee) => {
@@ -77,6 +90,15 @@ export default function Employees() {
       return;
     }
 
+    // Regra de negócio: não é permitido cadastrar colaborador com menos de 16 anos.
+    const birthDateValidationError = validateBirthDate(formData.birthDate);
+
+    if (birthDateValidationError) {
+      setBirthDateError(birthDateValidationError);
+      return;
+    }
+
+    setBirthDateError(null);
     setIsSaving(true);
 
     try {
@@ -116,6 +138,7 @@ export default function Employees() {
       dismissalDate: employee.dismissalDate ?? "",
       dismissalNotes: employee.dismissalNotes ?? "",
     });
+    setBirthDateError(null);
     setEditingId(employee.id);
     setIsModalOpen(true);
   };
@@ -146,11 +169,23 @@ export default function Employees() {
       columns,
       data,
       "colaboradores_sst_pro",
+      {
+        tag: "Gestão de pessoas",
+        description:
+          "Quadro de colaboradores com vínculo, cargo e situação cadastral no momento da emissão.",
+        highlights: [
+          { label: "Colaboradores", value: String(data.length) },
+          { label: "Ativos", value: String(activeEmployees) },
+          { label: "Demitidos", value: String(inactiveEmployees) },
+          { label: "Empresas", value: String(linkedCompanies) },
+        ],
+      },
     );
   };
 
   const openNewModal = () => {
     setEditingId(null);
+    setBirthDateError(null);
     setFormData({
       ...initialFormState,
       companyId: companies[0]?.id ?? "",
@@ -213,7 +248,7 @@ export default function Employees() {
           </div>
 
           {!canCreateEmployee && (
-            <p className="mt-4 text-sm text-amber-700">
+            <p className="hero-note mt-4 text-sm">
               Cadastre ao menos uma empresa e um cargo antes de incluir novos
               colaboradores.
             </p>
@@ -360,9 +395,7 @@ export default function Employees() {
                     <p className="mobile-record-label">Admissão</p>
                     <p className="mobile-record-value">
                       {employee.admissionDate
-                        ? new Date(employee.admissionDate).toLocaleDateString(
-                            "pt-BR",
-                          )
+                        ? formatDate(employee.admissionDate)
                         : "—"}
                     </p>
                   </div>
@@ -371,9 +404,7 @@ export default function Employees() {
                       <p className="mobile-record-label">Demissão</p>
                       <p className="mobile-record-value">
                         {employee.dismissalDate
-                          ? new Date(employee.dismissalDate).toLocaleDateString(
-                              "pt-BR",
-                            )
+                          ? formatDate(employee.dismissalDate)
                           : "—"}
                       </p>
                     </div>
@@ -471,9 +502,7 @@ export default function Employees() {
                     </td>
                     <td className="px-6 py-4">
                       {employee.admissionDate
-                        ? new Date(employee.admissionDate).toLocaleDateString(
-                            "pt-BR",
-                          )
+                        ? formatDate(employee.admissionDate)
                         : "—"}
                     </td>
                     <td className="px-6 py-4">
@@ -490,9 +519,7 @@ export default function Employees() {
                         employee.dismissalDate && (
                           <p className="mt-1 text-xs text-slate-500">
                             em{" "}
-                            {new Date(
-                              employee.dismissalDate,
-                            ).toLocaleDateString("pt-BR")}
+                            {formatDate(employee.dismissalDate)}
                           </p>
                         )}
                       {employee.status === "inactive" &&
@@ -622,15 +649,34 @@ export default function Employees() {
                   <input
                     type="date"
                     required
+                    min={minBirthDate}
+                    max={maxBirthDate}
                     value={formData.birthDate}
-                    onChange={(event) =>
-                      setFormData({
-                        ...formData,
-                        birthDate: event.target.value,
-                      })
+                    onChange={(event) => {
+                      const birthDate = event.target.value;
+                      setFormData({ ...formData, birthDate });
+                      setBirthDateError(
+                        birthDate ? validateBirthDate(birthDate) : null,
+                      );
+                    }}
+                    aria-invalid={birthDateError ? true : undefined}
+                    className={
+                      birthDateError
+                        ? "w-full rounded-2xl border border-red-300 bg-red-50/50 px-4 py-3 text-sm"
+                        : "w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm"
                     }
-                    className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm"
                   />
+                  {birthDateError ? (
+                    <p className="mt-1.5 text-xs font-semibold text-red-600">
+                      {birthDateError}
+                    </p>
+                  ) : (
+                    <p className="mt-1.5 text-xs text-slate-500">
+                      {currentAge !== null && currentAge >= 0
+                        ? `Idade: ${currentAge} anos.`
+                        : `Idade mínima permitida: ${MIN_EMPLOYEE_AGE_YEARS} anos.`}
+                    </p>
+                  )}
                 </div>
 
                 <div>

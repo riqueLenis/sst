@@ -714,8 +714,88 @@ thead th {
   box-shadow: var(--shadow-card);
 }
 
+/* Área de apresentação do topo de cada aba com o azul da marca. Os textos e
+   botões internos ficam em versão clara para manter o contraste. */
+.hero-card,
+.page-header {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 1.7rem;
+  background: linear-gradient(
+    140deg,
+    #1d5390 0%,
+    var(--accent) 52%,
+    #102f57 100%
+  );
+  box-shadow: 0 34px 72px -44px rgba(12, 31, 59, 0.72);
+  color: #f4f9fc;
+}
+
 .hero-card {
   padding: 1.75rem;
+}
+
+/* Cabeçalho das abas que ainda usam o layout de título + ações. */
+.page-header {
+  padding: 1.4rem 1.5rem;
+}
+
+.page-header h1 {
+  color: #f8fbfd;
+}
+
+.page-header p {
+  color: rgba(230, 242, 249, 0.86);
+}
+
+/* Ação principal em verde da marca, para destacar sobre o azul. */
+.page-header .bg-blue-600 {
+  background-image: linear-gradient(
+    135deg,
+    var(--brand) 0%,
+    var(--brand-strong) 100%
+  );
+  box-shadow: 0 18px 30px -22px rgba(9, 20, 43, 0.75);
+}
+
+.page-header .bg-blue-600:hover {
+  filter: brightness(1.06);
+}
+
+.hero-card .hero-accent {
+  color: #d9f7ee;
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.hero-card .hero-title {
+  color: #f8fbfd;
+}
+
+.hero-card .hero-description {
+  color: rgba(230, 242, 249, 0.86);
+}
+
+.hero-card .hero-note {
+  color: #ffd7a3;
+}
+
+.hero-card .btn-primary {
+  background: linear-gradient(
+    135deg,
+    var(--brand) 0%,
+    var(--brand-strong) 100%
+  );
+  box-shadow: 0 18px 32px -20px rgba(9, 20, 43, 0.7);
+}
+
+.hero-card .btn-secondary {
+  border-color: rgba(255, 255, 255, 0.34);
+  background: rgba(255, 255, 255, 0.95);
+}
+
+.hero-card .btn-soft {
+  color: #eaf7f3;
+  border-color: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.13);
 }
 
 .hero-accent {
@@ -1270,21 +1350,59 @@ thead th {
     padding: 0.9rem;
   }
 
+  /* Header compacto em tablets e celulares: uma única linha, sem quebra e sem
+     os textos auxiliares (trilha e descrição), que só aparecem no desktop. */
   .app-header {
-    padding: 0.95rem 1rem;
-    border-radius: 1.25rem;
+    flex-direction: row;
+    align-items: center;
+    gap: 0.6rem;
+    top: 0.6rem;
+    padding: 0.55rem 0.7rem;
+    border-radius: 1.15rem;
+  }
+
+  .app-header-trail,
+  .app-header-copy,
+  .app-date-chip {
+    display: none;
+  }
+
+  .app-header-title {
+    margin: 0;
+    font-size: clamp(1.05rem, 3.2vw, 1.32rem);
+    line-height: 1.15;
   }
 
   .app-header-actions {
-    width: 100%;
-    justify-content: space-between;
+    width: auto;
+    flex-wrap: nowrap;
+    justify-content: flex-end;
+    gap: 0.4rem;
   }
 
-  .app-header-copy {
-    max-width: none;
+  .app-menu-button,
+  .app-icon-button {
+    width: 2.35rem;
+    height: 2.35rem;
+    border-radius: 0.9rem;
+  }
+
+  .header-user-card {
+    min-height: auto;
+    gap: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+  }
+
+  .header-user-avatar {
+    width: 2.35rem;
+    height: 2.35rem;
+    font-size: 0.76rem;
   }
 
   .app-content {
+    padding-top: 0.9rem;
     padding-bottom: 6.9rem;
   }
 
@@ -1298,6 +1416,7 @@ thead th {
 
   .hero-card,
   .hero-aside,
+  .page-header,
   .panel {
     padding: 1.15rem;
     border-radius: 1.35rem;
@@ -1446,20 +1565,16 @@ thead th {
   }
 
   .app-header {
-    flex-direction: column;
-    align-items: stretch;
+    padding: 0.5rem 0.6rem;
   }
 
-  .app-header-actions {
-    justify-content: space-between;
-  }
-
-  .app-header-copy {
-    max-width: none;
+  .app-header-title {
+    font-size: 1.12rem;
   }
 
   .hero-card,
   .hero-aside,
+  .page-header,
   .panel {
     padding: 1.15rem;
   }
@@ -1499,9 +1614,9 @@ thead th {
   }
 
   .app-header {
-    top: 0.75rem;
-    padding: 0.95rem;
-    border-radius: 1.35rem;
+    top: 0.6rem;
+    padding: 0.5rem 0.6rem;
+    border-radius: 1.1rem;
   }
 
   .metric-card {
@@ -1519,24 +1634,28 @@ thead th {
   .mobile-nav-item span {
     line-height: 1;
   }
-
+}
 
 @media (max-width: 479px) {
-  .hero-actions > *,
-  .toolbar-actions > * {
-    flex: 1 1 100%;
+  .app-header {
+    gap: 0.45rem;
+  }
+
+  .app-header-title {
+    font-size: 1.02rem;
   }
 
   .app-header-actions {
-    gap: 0.55rem;
+    gap: 0.3rem;
   }
 
-  .app-date-chip,
-  .header-user-card {
-    width: 100%;
-    justify-content: center;
+  .app-menu-button,
+  .app-icon-button,
+  .header-user-avatar {
+    width: 2.2rem;
+    height: 2.2rem;
   }
-}
+
   .header-user-card {
     min-width: 0;
   }
@@ -1553,5 +1672,4 @@ thead th {
   .metric-card {
     grid-column: span 2 / span 2;
   }
-
 }
