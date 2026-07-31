@@ -16,6 +16,7 @@ import {
   Menu,
   ShieldCheck,
   Stethoscope,
+  Undo2,
   type LucideIcon,
   Users,
 } from "lucide-react";
@@ -69,6 +70,12 @@ const navItems: NavItem[] = [
     path: "/entregas",
     icon: ShieldCheck,
     description: "Entrega e devolução.",
+  },
+  {
+    name: "Devoluções",
+    path: "/devolucoes",
+    icon: Undo2,
+    description: "Histórico de devoluções.",
   },
   {
     name: "Saúde Ocupacional",
@@ -148,8 +155,8 @@ export default function Layout() {
       return navItems.filter((item) => item.path !== "/acessos");
     }
 
-    return navItems.filter(
-      (item) => item.path === "/epis" || item.path === "/entregas",
+    return navItems.filter((item) =>
+      ["/epis", "/entregas", "/devolucoes"].includes(item.path),
     );
   }, [user?.role]);
   const visibleMobileNavItems = useMemo(() => {

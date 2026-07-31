@@ -263,6 +263,8 @@ const ppeDeliveryObjectSchema = z
     quantity: positiveInteger("Quantidade"),
     deliveryDate: dateString("Data da entrega"),
     returnDate: optionalDateString("Data de devolução"),
+    returnedAt: optionalDateString("Data/hora da devolução"),
+    returnReason: optionalTrimmedString("Motivo da devolução", 240),
     reason: trimmedString("Motivo", 240),
     replacementReason: optionalTrimmedString("Motivo da substituição", 240),
     status: enumField(

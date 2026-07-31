@@ -12,7 +12,7 @@ import {
   User,
 } from "lucide-react";
 import { useAppContext } from "../store/AppContext";
-import { formatDate } from "../lib/dates";
+import { formatDate, formatDateTime } from "../lib/dates";
 import {
   formatPPEDeliveryReason,
   formatPPEDeliverySignedAt,
@@ -377,10 +377,20 @@ export default function PPEDeliveryDetail() {
                   <span className="font-semibold text-slate-800">
                     Devolução:
                   </span>{" "}
-                  {delivery.returnDate
-                    ? formatDate(delivery.returnDate)
-                    : "Ainda não devolvido"}
+                  {delivery.returnedAt
+                    ? formatDateTime(delivery.returnedAt)
+                    : delivery.returnDate
+                      ? formatDate(delivery.returnDate)
+                      : "Ainda não devolvido"}
                 </p>
+                {delivery.returnReason && (
+                  <p>
+                    <span className="font-semibold text-slate-800">
+                      Motivo da devolução:
+                    </span>{" "}
+                    {delivery.returnReason}
+                  </p>
+                )}
               </div>
             </div>
           </div>

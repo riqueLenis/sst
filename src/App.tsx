@@ -15,6 +15,7 @@ const EmployeeProfile = lazy(() => import("./pages/EmployeeProfile"));
 const PPEs = lazy(() => import("./pages/PPEs"));
 const PPEDeliveries = lazy(() => import("./pages/PPEDeliveries"));
 const PPEDeliveryDetail = lazy(() => import("./pages/PPEDeliveryDetail"));
+const Returns = lazy(() => import("./pages/Returns"));
 const Financial = lazy(() => import("./pages/Financial"));
 const Programs = lazy(() => import("./pages/Programs"));
 const OccupationalHealth = lazy(() => import("./pages/OccupationalHealth"));
@@ -102,6 +103,7 @@ export default function App() {
                   <Route path="epis" element={<PPEs />} />
                   <Route path="entregas" element={<PPEDeliveries />} />
                   <Route path="entregas/:id" element={<PPEDeliveryDetail />} />
+                  <Route path="devolucoes" element={<Returns />} />
                   <Route
                     element={
                       <ProtectedRoute allowedRoles={["admin"]} redirectTo="/" />

@@ -74,6 +74,9 @@ export interface PPEDelivery {
   quantity: number;
   deliveryDate: string;
   returnDate?: string;
+  // Momento exato (ISO) e motivo informados no registro da devolução.
+  returnedAt?: string;
+  returnReason?: string;
   reason: string;
   replacementReason?: string;
   status: "delivered" | "returned" | "lost";

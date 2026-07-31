@@ -428,15 +428,27 @@ export class MySqlStore {
       );
     }
 
-    if (delivery.status === "returned" && !delivery.returnDate) {
-      throw new HttpError(
-        400,
-        "Entregas com status 'returned' precisam informar returnDate.",
-      );
-    }
+    if (delivery.status === "returned") {
+      if (!delivery.returnDate) {
+        throw new HttpError(
+          400,
+          "Entregas com status 'returned' precisam informar returnDate.",
+        );
+      }
 
-    if (delivery.status !== "returned") {
+      if (!delivery.returnReason?.trim()) {
+        throw new HttpError(
+          400,
+          "Informe o motivo da devolução para concluir o registro.",
+        );
+      }
+
+      // Guarda o horário da devolução quando o cliente não enviar.
+      delivery.returnedAt = delivery.returnedAt ?? new Date().toISOString();
+    } else {
       delivery.returnDate = undefined;
+      delivery.returnedAt = undefined;
+      delivery.returnReason = undefined;
     }
 
     if (delivery.reason === "Substituição") {

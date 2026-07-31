@@ -25,6 +25,16 @@ import {
   generatePPEDeliveryPdf,
 } from "../lib/ppeDeliveryPdf";
 
+// Motivos aceitos no registro de devolução de EPI.
+export const PPE_RETURN_REASONS = [
+  "Desligamento do colaborador",
+  "Troca por novo EPI",
+  "Fim da vida útil / validade",
+  "EPI danificado",
+  "Troca de função ou setor",
+  "Outros",
+];
+
 // Motivos em que o técnico escolhe manualmente quais EPIs entregar.
 // Na Admissão a entrega segue o fluxo padrão: o kit obrigatório do cargo.
 const REASONS_WITH_PPE_SELECTION = [
@@ -71,6 +81,13 @@ export default function PPEDeliveries() {
   const [facePhotoFeedback, setFacePhotoFeedback] = useState<string | null>(
     null,
   );
+  // Devolução: entrega escolhida, motivo informado e estado de gravação.
+  const [returnTarget, setReturnTarget] = useState<PPEDelivery | null>(null);
+  const [returnForm, setReturnForm] = useState({
+    reason: PPE_RETURN_REASONS[0],
+    notes: "",
+  });
+  const [isReturning, setIsReturning] = useState(false);
 
   const activeEmployees = employees.filter(
     (employee) => employee.status === "active",
@@ -451,7 +468,7 @@ export default function PPEDeliveries() {
     }
   };
 
-  const handleReturn = (id: string) => {
+  const openReturnModal = (delivery: PPEDelivery) => {
     if (!canManageDeliveries) {
       window.alert(
         "Somente usuários com perfil Gestor ou Admin podem registrar devoluções de EPI.",
@@ -459,11 +476,41 @@ export default function PPEDeliveries() {
       return;
     }
 
-    if (window.confirm("Confirmar devolução deste EPI?")) {
-      updatePPEDelivery(id, {
+    setReturnTarget(delivery);
+    setReturnForm({ reason: PPE_RETURN_REASONS[0], notes: "" });
+  };
+
+  const closeReturnModal = () => {
+    setReturnTarget(null);
+    setReturnForm({ reason: PPE_RETURN_REASONS[0], notes: "" });
+  };
+
+  const handleReturnSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+
+    if (!returnTarget || isReturning) {
+      return;
+    }
+
+    const notes = returnForm.notes.trim();
+    const returnReason = notes
+      ? `${returnForm.reason} - ${notes}`
+      : returnForm.reason;
+    // A data fica no formato do cadastro e o horário exato vai em returnedAt.
+    const now = new Date();
+
+    setIsReturning(true);
+
+    try {
+      await updatePPEDelivery(returnTarget.id, {
         status: "returned",
-        returnDate: new Date().toISOString().split("T")[0],
+        returnDate: now.toISOString().split("T")[0],
+        returnedAt: now.toISOString(),
+        returnReason,
       });
+      closeReturnModal();
+    } finally {
+      setIsReturning(false);
     }
   };
 
@@ -726,7 +773,7 @@ export default function PPEDeliveries() {
                   </button>
                   {canManageDeliveries && delivery.status === "delivered" && (
                     <button
-                      onClick={() => handleReturn(delivery.id)}
+                      onClick={() => openReturnModal(delivery)}
                       className="inline-flex items-center justify-center rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700 transition-colors hover:bg-emerald-100"
                       type="button"
                     >
@@ -844,7 +891,7 @@ export default function PPEDeliveries() {
                         </button>
                         {canManageDeliveries && delivery.status === "delivered" && (
                           <button
-                            onClick={() => handleReturn(delivery.id)}
+                            onClick={() => openReturnModal(delivery)}
                             className="px-3 py-1.5 text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 hover:bg-emerald-100 rounded-lg transition-colors"
                           >
                             Devolver
@@ -1322,6 +1369,113 @@ export default function PPEDeliveries() {
                     <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" />
                   )}
                   {isSaving ? "Registrando..." : "Registrar Entrega com Assinatura e Foto"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Registro da devolução: motivo obrigatório + data/hora automáticas. */}
+      {returnTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="my-6 w-full max-h-[calc(100vh-2rem)] max-w-md overflow-y-auto rounded-2xl bg-white shadow-xl animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50/50 px-6 py-4">
+              <h3 className="text-lg font-bold text-slate-900">
+                Registrar devolução
+              </h3>
+              <button
+                type="button"
+                onClick={closeReturnModal}
+                className="rounded-lg p-1 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600"
+              >
+                <span className="sr-only">Fechar</span>
+                <span className="text-base leading-none">×</span>
+              </button>
+            </div>
+
+            <form onSubmit={handleReturnSubmit} className="space-y-4 p-6">
+              <div className="rounded-xl border border-slate-200 bg-slate-50/80 px-4 py-3 text-sm">
+                <p className="font-semibold text-slate-900">
+                  {employees.find((e) => e.id === returnTarget.employeeId)
+                    ?.name ?? "Colaborador não encontrado"}
+                </p>
+                <p className="mt-0.5 text-xs text-slate-500">
+                  {ppes.find((p) => p.id === returnTarget.ppeId)?.name ??
+                    "EPI não encontrado"}{" "}
+                  • {returnTarget.quantity} un • Entregue em{" "}
+                  {formatDate(returnTarget.deliveryDate)}
+                </p>
+              </div>
+
+              <div>
+                <label className="mb-1.5 block text-sm font-semibold text-slate-700">
+                  Motivo da devolução
+                </label>
+                <select
+                  required
+                  value={returnForm.reason}
+                  onChange={(event) =>
+                    setReturnForm((prev) => ({
+                      ...prev,
+                      reason: event.target.value,
+                    }))
+                  }
+                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm transition-all focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  {PPE_RETURN_REASONS.map((reason) => (
+                    <option key={reason} value={reason}>
+                      {reason}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="mb-1.5 block text-sm font-semibold text-slate-700">
+                  Observações{" "}
+                  <span className="font-normal text-slate-400">(opcional)</span>
+                </label>
+                <textarea
+                  rows={3}
+                  value={returnForm.notes}
+                  onChange={(event) =>
+                    setReturnForm((prev) => ({
+                      ...prev,
+                      notes: event.target.value,
+                    }))
+                  }
+                  className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm transition-all focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Detalhe a condição do EPI devolvido, se necessário."
+                />
+              </div>
+
+              <p className="rounded-xl border border-blue-100 bg-blue-50/60 px-4 py-2.5 text-xs font-medium text-blue-800">
+                A data e a hora da devolução são registradas automaticamente no
+                momento da confirmação e o item volta para o estoque.
+              </p>
+
+              <div className="mt-8 flex flex-col-reverse gap-3 border-t border-slate-100 pt-4 sm:flex-row sm:justify-end">
+                <button
+                  type="button"
+                  onClick={closeReturnModal}
+                  disabled={isReturning}
+                  className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition-all hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={isReturning}
+                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-transparent bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm shadow-emerald-200 transition-all hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {isReturning && (
+                    <LoaderCircle
+                      className="h-4 w-4 animate-spin"
+                      aria-hidden="true"
+                    />
+                  )}
+                  {isReturning ? "Registrando..." : "Confirmar devolução"}
                 </button>
               </div>
             </form>
