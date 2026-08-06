@@ -1,6 +1,8 @@
 import { createReadStream } from "node:fs";
 import fs from "node:fs/promises";
+import path from "node:path";
 import readline from "node:readline";
+import { fileURLToPath } from "node:url";
 import zlib from "node:zlib";
 import { env } from "../config/env.js";
 import { downloadFileOverFtp } from "../lib/ftp-download.js";
@@ -137,22 +139,22 @@ const GZIP_SIGNATURE = 0x8b1f;
 
 // Nomes usados pelo MTE: relatório exportado do portal e arquivo do FTP.
 const CAEPI_FILE_PATTERN = /^(relatorioca|tgg_export_caepi).*\.(csv|txt|zip|gz)$/i;
-const resolveCaepiFilePath = async (configuredPath) => {
-  const stats = await fs.stat(configuredPath);
+/** Dentro de uma pasta, devolve o arquivo de CA mais recente (ou null). */
+const findCaepiFileInDirectory = async (directory) => {
+  let entries;
 
-  if (stats.isFile()) {
-    return configuredPath;
+  try {
+    entries = await fs.readdir(directory, { withFileTypes: true });
+  } catch {
+    return null;
   }
 
-  const entries = await fs.readdir(configuredPath, { withFileTypes: true });
   const candidates = entries
     .filter((entry) => entry.isFile() && CAEPI_FILE_PATTERN.test(entry.name))
-    .map((entry) => `${configuredPath.replace(/[\\/]$/, "")}/${entry.name}`);
+    .map((entry) => path.join(directory, entry.name));
 
   if (candidates.length === 0) {
-    throw new Error(
-      `Nenhum arquivo da base do CAEPI encontrado em ${configuredPath} (esperado RelatorioCA_*.csv ou tgg_export_caepi.*).`,
-    );
+    return null;
   }
 
   const withTimes = await Promise.all(
@@ -165,6 +167,50 @@ const resolveCaepiFilePath = async (configuredPath) => {
   withTimes.sort((left, right) => right.modifiedAt - left.modifiedAt);
 
   return withTimes[0].file;
+};
+
+const backendDirectory = path.dirname(
+  path.dirname(fileURLToPath(import.meta.url)),
+);
+
+const DEFAULT_SEARCH_DIRECTORIES = [
+  process.cwd(),
+  path.join(process.cwd(), "data"),
+  path.join(process.cwd(), "assets"),
+  backendDirectory,
+  path.join(backendDirectory, "data"),
+  path.dirname(backendDirectory),
+  path.join(path.dirname(backendDirectory), "assets"),
+];
+
+export const resolveCaepiFilePath = async (configuredPath) => {
+  if (configuredPath) {
+    const stats = await fs.stat(configuredPath);
+
+    if (stats.isFile()) {
+      return configuredPath;
+    }
+
+    const found = await findCaepiFileInDirectory(configuredPath);
+
+    if (!found) {
+      throw new Error(
+        `Nenhum arquivo da base do CAEPI encontrado em ${configuredPath} (esperado RelatorioCA_*.csv ou tgg_export_caepi.*).`,
+      );
+    }
+
+    return found;
+  }
+
+  for (const directory of [...new Set(DEFAULT_SEARCH_DIRECTORIES)]) {
+    const found = await findCaepiFileInDirectory(directory);
+
+    if (found) {
+      return found;
+    }
+  }
+
+  return null;
 };
 
 const readLocalCaepiRecords = async (configuredPath) => {
@@ -340,6 +386,7 @@ export class CaepiService {
     this.repository = repository;
     this.syncPromise = null;
     this.lastError = null;
+    this.resolvedFile = null;
   }
 
   /** Consulta um CA na base local. */
@@ -406,7 +453,8 @@ export class CaepiService {
       lastSyncRecords: lastSync?.records ?? null,
       partial: lastSync?.partial ?? false,
       lastError: this.lastError ?? null,
-      source: env.caepiFilePath ?? `ftp://${FTP_HOST}${FTP_PATH}`,
+      source:
+        this.resolvedFile ?? env.caepiFilePath ?? `ftp://${FTP_HOST}${FTP_PATH}`,
       syncing: this.syncPromise !== null,
     };
   }
@@ -458,18 +506,23 @@ export class CaepiService {
       };
 
       let source;
+      let localFile = null;
 
-      if (env.caepiFilePath) {
-        try {
-          source = await readLocalCaepiRecords(env.caepiFilePath);
-        } catch (error) {
-          console.warn(
-            `[sst-api] não foi possível ler CAEPI_FILE_PATH (${error.message}); usando o FTP oficial.`,
-          );
-          source = await syncFromFtp();
-        }
+      try {
+        localFile = await resolveCaepiFilePath(env.caepiFilePath);
+      } catch (error) {
+        console.warn(
+          `[sst-api] CAEPI_FILE_PATH inválido (${error.message}); tentando o FTP oficial.`,
+        );
+      }
+
+      if (localFile) {
+        console.log(`[sst-api] base do CAEPI: importando de ${localFile}`);
+        source = await readLocalCaepiRecords(localFile);
+        this.resolvedFile = localFile;
       } else {
         source = await syncFromFtp();
+        this.resolvedFile = null;
       }
 
       const { records, partial } = source;
