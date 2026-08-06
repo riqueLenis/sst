@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useAppContext } from "../store/AppContext";
 import {
   AlertTriangle,
@@ -17,6 +17,19 @@ import {
   Users,
 } from "lucide-react";
 import { exportTableToPDF } from "../lib/pdfUtils";
+import { getApiErrorMessage } from "../lib/apiClient";
+import {
+  CAEPI_SITUATION_CLASSES,
+  CAEPI_SITUATION_LABELS,
+  fetchCaepiRecord,
+  fetchCaepiRecords,
+  fetchCaepiStatus,
+  normalizeCaNumber,
+  syncCaepiBase,
+  type CaepiRecord,
+  type CaepiStatus,
+} from "../lib/caepi";
+import { formatDate, formatDateTime } from "../lib/dates";
 import { useAuth } from "../store/AuthContext";
 import type { PPE } from "../types";
 
@@ -99,7 +112,16 @@ const formatWholeNumber = (value: number) => numberFormatter.format(value);
 export default function PPEs() {
   const { ppes, ppeDeliveries, employees, addPPE, updatePPE, deletePPE } =
     useAppContext();
-  const { user } = useAuth();
+  const { token, user } = useAuth();
+  // Consulta do CA no cadastro e situação dos CAs já cadastrados.
+  const [caLookup, setCaLookup] = useState<CaepiRecord | null>(null);
+  const [caLookupError, setCaLookupError] = useState<string | null>(null);
+  const [isCheckingCa, setIsCheckingCa] = useState(false);
+  const [caStatusByNumber, setCaStatusByNumber] = useState<
+    Record<string, CaepiRecord>
+  >({});
+  const [caepiStatus, setCaepiStatus] = useState<CaepiStatus | null>(null);
+  const [isSyncingCaepi, setIsSyncingCaepi] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -176,11 +198,126 @@ export default function PPEs() {
     }
   };
 
+  useEffect(() => {
+    const numbers = [
+      ...new Set(ppes.map((ppe) => normalizeCaNumber(ppe.ca)).filter(Boolean)),
+    ];
+
+    if (numbers.length === 0) {
+      setCaStatusByNumber({});
+      return;
+    }
+
+    let active = true;
+
+    void (async () => {
+      try {
+        const records = await fetchCaepiRecords(numbers, token);
+
+        if (!active) {
+          return;
+        }
+
+        setCaStatusByNumber(
+          Object.fromEntries(records.map((record) => [record.ca, record])),
+        );
+      } catch (error) {
+        // A tela continua funcionando sem a validação do CA.
+        console.warn("[EXIN SST] Não foi possível validar os CAs.", error);
+      }
+    })();
+
+    return () => {
+      active = false;
+    };
+  }, [ppes, token]);
+
+  useEffect(() => {
+    let active = true;
+
+    void (async () => {
+      try {
+        const status = await fetchCaepiStatus(token);
+
+        if (active) {
+          setCaepiStatus(status);
+        }
+      } catch {
+        // Sem status a tela segue normalmente; a consulta individual avisa.
+      }
+    })();
+
+    return () => {
+      active = false;
+    };
+  }, [token]);
+
+  const handleCaepiSync = async () => {
+    if (isSyncingCaepi) {
+      return;
+    }
+
+    setIsSyncingCaepi(true);
+
+    try {
+      await syncCaepiBase(token);
+      setCaepiStatus(await fetchCaepiStatus(token));
+      window.alert("Base do CAEPI atualizada com sucesso.");
+    } catch (error) {
+      window.alert(getApiErrorMessage(error));
+    } finally {
+      setIsSyncingCaepi(false);
+    }
+  };
+
+  const getCaStatus = (ca: string) =>
+    caStatusByNumber[normalizeCaNumber(ca)] ?? null;
+
+  /** Consulta o CA na base do MTE e preenche os dados do equipamento. */
+  const handleCaLookup = async () => {
+    const ca = normalizeCaNumber(formData.ca);
+
+    if (!ca) {
+      setCaLookup(null);
+      setCaLookupError("Informe o número do CA para consultar.");
+      return;
+    }
+
+    setIsCheckingCa(true);
+    setCaLookupError(null);
+
+    try {
+      const record = await fetchCaepiRecord(ca, token);
+
+      setCaLookup(record);
+      setFormData((previous) => ({
+        ...previous,
+        ca: record.ca,
+        // Só preenche o que ainda está vazio, para não sobrescrever ajustes.
+        name: previous.name.trim() ? previous.name : record.equipamento,
+        description: previous.description.trim()
+          ? previous.description
+          : [record.descricao, record.aprovadoPara]
+              .map((part) => part.trim())
+              .filter(Boolean)
+              .join(" — "),
+      }));
+    } catch (error) {
+      setCaLookup(null);
+      setCaLookupError(getApiErrorMessage(error));
+    } finally {
+      setIsCheckingCa(false);
+    }
+  };
+
   const handleEdit = (ppe: PPE) => {
     if (!canEditPPEs) {
       showEditPermissionAlert();
       return;
     }
+
+    setCaLookup(null);
+    setCaLookupError(null);
 
     setFormData({
       name: ppe.name,
@@ -210,23 +347,34 @@ export default function PPEs() {
     const columns = [
       "Nome do Equipamento",
       "CA",
-      "Descrição",
+      "Situação do CA",
+      "Validade do CA",
       "Custo Unitário",
       "Estoque",
       "Estoque Mínimo",
       "Vida Útil (dias)",
       "Valor em Estoque",
     ];
-    const data = filteredPPEs.map((p) => [
-      p.name,
-      p.ca,
-      p.description,
-      formatCurrency(getPpeUnitCost(p)),
-      p.stockQuantity.toString(),
-      getPpeMinimumStock(p).toString(),
-      getPpeUsefulLifeDays(p).toString(),
-      formatCurrency(p.stockQuantity * getPpeUnitCost(p)),
-    ]);
+    const data = filteredPPEs.map((p) => {
+      const caStatus = getCaStatus(p.ca);
+
+      return [
+        p.name,
+        p.ca,
+        caStatus
+          ? CAEPI_SITUATION_LABELS[caStatus.situacaoNormalizada].replace(
+              "CA ",
+              "",
+            )
+          : "Não localizado",
+        caStatus ? formatDate(caStatus.validade) : "—",
+        formatCurrency(getPpeUnitCost(p)),
+        p.stockQuantity.toString(),
+        getPpeMinimumStock(p).toString(),
+        getPpeUsefulLifeDays(p).toString(),
+        formatCurrency(p.stockQuantity * getPpeUnitCost(p)),
+      ];
+    });
     exportTableToPDF(
       "Relatório de Estoque de EPIs",
       columns,
@@ -261,6 +409,10 @@ export default function PPEs() {
               ),
             ),
           },
+          {
+            label: "CA irregular",
+            value: String(irregularCaItems.length),
+          },
         ],
       },
     );
@@ -271,6 +423,15 @@ export default function PPEs() {
       p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       p.ca.includes(searchTerm) ||
       p.description.toLowerCase().includes(searchTerm.toLowerCase()),
+  );
+
+  // EPIs cujo CA está vencido, suspenso ou cancelado na base do MTE.
+  const irregularCaItems = filteredPPEs.filter((ppe) => {
+    const status = getCaStatus(ppe.ca);
+    return status ? !status.regular : false;
+  });
+  const unknownCaItems = filteredPPEs.filter(
+    (ppe) => normalizeCaNumber(ppe.ca) && !getCaStatus(ppe.ca),
   );
 
   const analyticsRows = useMemo<PPEAnalyticsRow[]>(() => {
@@ -655,6 +816,8 @@ export default function PPEs() {
             <button
               onClick={() => {
                 setEditingId(null);
+                setCaLookup(null);
+                setCaLookupError(null);
                 setFormData({
                   name: "",
                   ca: "",
@@ -1099,9 +1262,47 @@ export default function PPEs() {
         </div>
       </section>
 
+      {irregularCaItems.length > 0 && (
+        <div className="rounded-2xl border border-red-100 bg-red-50/70 px-5 py-4">
+          <p className="flex items-center gap-2 text-sm font-semibold text-red-800">
+            <AlertTriangle className="h-4 w-4" />
+            {irregularCaItems.length} EPI(s) com CA irregular na base do
+            Ministério do Trabalho
+          </p>
+          <p className="mt-1 text-xs text-red-700">
+            {irregularCaItems
+              .slice(0, 5)
+              .map((ppe) => {
+                const status = getCaStatus(ppe.ca);
+                return `${ppe.name} (CA ${ppe.ca} — ${
+                  status
+                    ? CAEPI_SITUATION_LABELS[
+                        status.situacaoNormalizada
+                      ].toLowerCase()
+                    : "situação desconhecida"
+                })`;
+              })
+              .join(" · ")}
+            {irregularCaItems.length > 5 &&
+              ` · e mais ${irregularCaItems.length - 5}`}
+          </p>
+        </div>
+      )}
+
+      {unknownCaItems.length > 0 && (
+        <div className="rounded-2xl border border-amber-100 bg-amber-50/70 px-5 py-4 text-sm text-amber-800">
+          <span className="font-semibold">
+            {unknownCaItems.length} EPI(s) com CA não localizado na base oficial.
+          </span>{" "}
+          {caepiStatus?.partial
+            ? "A cópia disponível da base do MTE está incompleta (o arquivo publicado vem truncado), então esses CAs podem existir. Confirme em caepi.trabalho.gov.br."
+            : "Confira o número informado no cadastro."}
+        </div>
+      )}
+
       <div className="bg-white shadow-sm rounded-2xl border border-slate-200 overflow-hidden">
-        <div className="p-4 border-b border-slate-100 bg-slate-50/50">
-          <div className="relative max-w-md">
+        <div className="flex flex-col gap-3 border-b border-slate-100 bg-slate-50/50 p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="relative w-full max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
             <input
               type="text"
@@ -1110,6 +1311,35 @@ export default function PPEs() {
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-9 pr-4 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
             />
+          </div>
+
+          {/* Situação da base oficial de CAs importada do MTE. */}
+          <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500">
+            <span>
+              {caepiStatus && caepiStatus.total > 0
+                ? `Base CAEPI: ${formatWholeNumber(caepiStatus.total)} CAs · ${
+                    caepiStatus.lastSyncAt
+                      ? `atualizada em ${formatDateTime(caepiStatus.lastSyncAt)}`
+                      : "sem registro de atualização"
+                  }${caepiStatus.partial ? " · arquivo oficial incompleto" : ""}`
+                : "Base CAEPI ainda não importada."}
+            </span>
+
+            {canEditPPEs && (
+              <button
+                type="button"
+                onClick={() => {
+                  void handleCaepiSync();
+                }}
+                disabled={isSyncingCaepi}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 font-semibold text-slate-600 transition-colors hover:bg-slate-50 hover:text-slate-900 disabled:pointer-events-none disabled:opacity-50"
+              >
+                {isSyncingCaepi && (
+                  <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
+                )}
+                {isSyncingCaepi ? "Atualizando..." : "Atualizar base"}
+              </button>
+            )}
           </div>
         </div>
         <div className="overflow-x-auto">
@@ -1149,7 +1379,38 @@ export default function PPEs() {
                         <span>{ppe.name}</span>
                       </div>
                     </td>
-                    <td className="px-6 py-4">{ppe.ca}</td>
+                    <td className="px-6 py-4">
+                      <div className="flex flex-col gap-1">
+                        <span className="font-medium text-slate-700">
+                          {ppe.ca}
+                        </span>
+                        {(() => {
+                          const caStatus = getCaStatus(ppe.ca);
+
+                          if (!caStatus) {
+                            return null;
+                          }
+
+                          return (
+                            <span
+                              className={`inline-flex w-fit items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold ${CAEPI_SITUATION_CLASSES[caStatus.situacaoNormalizada]}`}
+                              title={
+                                caStatus.validade
+                                  ? `Validade ${formatDate(caStatus.validade)} · ${caStatus.razaoSocial}`
+                                  : caStatus.razaoSocial
+                              }
+                            >
+                              {!caStatus.regular && (
+                                <AlertTriangle className="h-3 w-3" />
+                              )}
+                              {CAEPI_SITUATION_LABELS[
+                                caStatus.situacaoNormalizada
+                              ].replace("CA ", "")}
+                            </span>
+                          );
+                        })()}
+                      </div>
+                    </td>
                     <td className="px-6 py-4">{ppe.description}</td>
                     <td className="px-6 py-4 font-semibold text-slate-900">
                       {formatCurrency(getPpeUnitCost(ppe))}
@@ -1260,16 +1521,113 @@ export default function PPEs() {
                 <label className="block text-sm font-semibold text-slate-700 mb-1.5">
                   CA (Certificado de Aprovação)
                 </label>
-                <input
-                  type="text"
-                  required
-                  value={formData.ca}
-                  onChange={(e) =>
-                    setFormData({ ...formData, ca: e.target.value })
-                  }
-                  className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                  placeholder="Digite o CA"
-                />
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  <input
+                    type="text"
+                    required
+                    inputMode="numeric"
+                    value={formData.ca}
+                    onChange={(e) => {
+                      setFormData({ ...formData, ca: e.target.value });
+                      setCaLookup(null);
+                      setCaLookupError(null);
+                    }}
+                    className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm transition-all focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Digite o CA"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      void handleCaLookup();
+                    }}
+                    disabled={isCheckingCa || !formData.ca.trim()}
+                    className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 hover:text-slate-900 disabled:pointer-events-none disabled:opacity-50"
+                  >
+                    {isCheckingCa ? (
+                      <LoaderCircle className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Search className="h-4 w-4" />
+                    )}
+                    {isCheckingCa ? "Consultando..." : "Consultar CA"}
+                  </button>
+                </div>
+
+                <p className="mt-1.5 text-xs text-slate-500">
+                  A consulta usa a base oficial do Ministério do Trabalho
+                  (CAEPI), atualizada diariamente.
+                </p>
+
+                {caLookupError && (
+                  <div className="mt-2 rounded-xl border border-amber-100 bg-amber-50/80 px-3 py-2">
+                    <p className="text-xs font-semibold text-amber-800">
+                      {caLookupError}
+                    </p>
+                    <a
+                      href={`https://caepi.trabalho.gov.br/internet/consultaCAInternet.aspx?ca=${normalizeCaNumber(formData.ca)}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="mt-1 inline-block text-xs font-semibold text-blue-700 underline"
+                    >
+                      Conferir no portal do Ministério do Trabalho
+                    </a>
+                  </div>
+                )}
+
+                {caLookup && (
+                  <div className="mt-3 rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <p className="text-sm font-semibold text-slate-900">
+                        CA {caLookup.ca} · {caLookup.equipamento}
+                      </p>
+                      <span
+                        className={`status-pill border ${CAEPI_SITUATION_CLASSES[caLookup.situacaoNormalizada]}`}
+                      >
+                        {CAEPI_SITUATION_LABELS[caLookup.situacaoNormalizada]}
+                      </span>
+                    </div>
+
+                    <dl className="mt-3 grid gap-2 text-xs text-slate-600 sm:grid-cols-2">
+                      <div>
+                        <dt className="font-semibold text-slate-500">
+                          Validade
+                        </dt>
+                        <dd>{formatDate(caLookup.validade)}</dd>
+                      </div>
+                      <div>
+                        <dt className="font-semibold text-slate-500">
+                          Fabricante / importador
+                        </dt>
+                        <dd>{caLookup.razaoSocial || "—"}</dd>
+                      </div>
+                      <div>
+                        <dt className="font-semibold text-slate-500">
+                          Natureza
+                        </dt>
+                        <dd>{caLookup.natureza || "—"}</dd>
+                      </div>
+                      <div>
+                        <dt className="font-semibold text-slate-500">
+                          Norma técnica
+                        </dt>
+                        <dd>{caLookup.norma || "—"}</dd>
+                      </div>
+                    </dl>
+
+                    {caLookup.aprovadoPara && (
+                      <p className="mt-3 text-xs text-slate-600">
+                        <span className="font-semibold">Aprovado para:</span>{" "}
+                        {caLookup.aprovadoPara}
+                      </p>
+                    )}
+
+                    {!caLookup.regular && (
+                      <p className="mt-3 rounded-xl border border-amber-100 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800">
+                        Este CA não está regular no MTE. Confirme com o
+                        fabricante antes de liberar o EPI para entrega.
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-1.5">

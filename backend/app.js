@@ -10,8 +10,10 @@ import { MySqlStore } from "./lib/store.js";
 import { authenticate } from "./middlewares/authenticate.js";
 import { errorHandler, notFoundHandler } from "./middlewares/error-handler.js";
 import { createAuthRouter } from "./routes/auth.js";
+import { createCaepiRouter } from "./routes/caepi.js";
 import { apiResources, createApiRouter } from "./routes/api.js";
 import { AuthService } from "./services/auth-service.js";
+import { CaepiService } from "./services/caepi-service.js";
 
 const normalizeOrigin = (value) => value.replace(/\/$/, "");
 
@@ -85,6 +87,9 @@ const createApiRateLimiter = () =>
     max: env.rateLimitMax,
     standardHeaders: true,
     legacyHeaders: false,
+    // Sem isso, um deploy com trust proxy desligado enche o log de
+    // ERR_ERL_UNEXPECTED_X_FORWARDED_FOR a cada requisição.
+    validate: { xForwardedForHeader: env.trustProxy },
     handler: (_req, _res, next) => {
       next(
         new HttpError(
@@ -101,6 +106,9 @@ const createLoginRateLimiter = () =>
     max: Math.max(5, Math.ceil(env.rateLimitMax / 20)),
     standardHeaders: true,
     legacyHeaders: false,
+    // Sem isso, um deploy com trust proxy desligado enche o log de
+    // ERR_ERL_UNEXPECTED_X_FORWARDED_FOR a cada requisição.
+    validate: { xForwardedForHeader: env.trustProxy },
     skipSuccessfulRequests: true,
     handler: (_req, _res, next) => {
       next(
@@ -111,6 +119,26 @@ const createLoginRateLimiter = () =>
       );
     },
   });
+
+// A base do CAEPI é publicada uma vez por dia (20h). Sincroniza na subida do
+// servidor quando está velha e revisa de 6 em 6 horas.
+const CAEPI_SYNC_CHECK_INTERVAL_MS = 6 * 60 * 60 * 1000;
+
+const scheduleCaepiSync = (caepiService) => {
+  const runSync = () => {
+    caepiService.sync().catch((error) => {
+      console.warn(
+        "[sst-api] não foi possível sincronizar a base do CAEPI:",
+        error.message,
+      );
+    });
+  };
+
+  runSync();
+
+  const timer = setInterval(runSync, CAEPI_SYNC_CHECK_INTERVAL_MS);
+  timer.unref?.();
+};
 
 const setSensitiveResponseHeaders = (_req, res, next) => {
   res.setHeader(
@@ -138,6 +166,9 @@ export const createApp = async () => {
   const store = await MySqlStore.create();
   const authService = new AuthService(store.userRepository);
   await authService.bootstrapUsers();
+
+  const caepiService = new CaepiService(store.caepiRepository);
+  scheduleCaepiSync(caepiService);
 
   if (env.trustProxy) {
     app.set("trust proxy", 1);
@@ -210,6 +241,13 @@ export const createApp = async () => {
   app.use("/api/auth/login", createLoginRateLimiter());
   app.use("/api/auth", setSensitiveResponseHeaders, createApiRateLimiter());
   app.use("/api/auth", createAuthRouter(authService));
+  app.use(
+    "/api/caepi",
+    setSensitiveResponseHeaders,
+    createApiRateLimiter(),
+    authenticate(authService),
+    createCaepiRouter(caepiService),
+  );
   app.use(
     "/api",
     setSensitiveResponseHeaders,

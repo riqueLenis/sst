@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { createDatabaseClient, runInTransaction } from "../db/client.js";
 import { createInitialState } from "../data/seed.js";
+import { CaepiRepository } from "../repositories/caepi-repository.js";
 import { MySqlJsonRepository } from "../repositories/json-repository.js";
 import { UserRepository } from "../repositories/user-repository.js";
 import { HttpError } from "./http-error.js";
@@ -167,10 +168,23 @@ export class MySqlStore {
       ]),
     );
     this.userRepository = new UserRepository(this.db);
+    this.caepiRepository = new CaepiRepository(this.db);
   }
 
   async initialize() {
     await this.userRepository.initialize();
+
+    try {
+      await this.caepiRepository.initialize();
+      this.caepiReady = true;
+    } catch (error) {
+      this.caepiReady = false;
+      console.warn(
+        "[sst-api] base de CAs indisponível nesta instância:",
+        error.message,
+      );
+    }
+
     await Promise.all(
       resourceCollections.map((collection) =>
         this.repositories[collection].initialize(),

@@ -9,3 +9,6 @@ coverage/
 !.env.production.example
 backend/data/*.sqlite
 backend/data/*.sqlite-*
+# Base do CAEPI baixada do portal do MTE (arquivo grande, não versionar).
+assets/RelatorioCA_*
+*.csv.gz

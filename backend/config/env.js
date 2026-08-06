@@ -96,7 +96,8 @@ export const env = {
     readEnv("MYSQL_AUTO_CREATE_DATABASE"),
     nodeEnv !== "production",
   ),
-  trustProxy: readEnv("TRUST_PROXY") === "true",
+
+  trustProxy: parseBoolean(readEnv("TRUST_PROXY"), nodeEnv === "production"),
   corsOrigins: parseOrigins(readEnv("CORS_ORIGIN")),
   rateLimitWindowMs: parseNumber(
     readEnv("RATE_LIMIT_WINDOW_MS"),
@@ -104,6 +105,7 @@ export const env = {
   ),
   rateLimitMax: parseNumber(readEnv("RATE_LIMIT_MAX"), 200),
   bodyLimit: readEnv("BODY_LIMIT") ?? "12mb",
+  caepiFilePath: readEnv("CAEPI_FILE_PATH"),
   authCookieName: readEnv("AUTH_COOKIE_NAME") ?? "sst_access_token",
   authCookieSecure: parseBoolean(
     readEnv("AUTH_COOKIE_SECURE"),
